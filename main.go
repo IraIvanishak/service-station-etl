@@ -9,6 +9,7 @@ import (
 
 	"github.com/IraIvanishak/service-station-etl/dto"
 	"github.com/IraIvanishak/service-station-etl/internal/config"
+	"github.com/IraIvanishak/service-station-etl/internal/etl"
 	"github.com/IraIvanishak/service-station-etl/storage/dbs"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -31,6 +32,7 @@ func main() {
 	}
 
 	queries = dbs.New(connection)
+	loads := etl.NewRunner(connection)
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: cfg.CORSOrigins,
 		AllowMethods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
@@ -616,118 +618,31 @@ func main() {
 	})
 
 	app.Post("/clearmeta", func(ctx *fiber.Ctx) error {
-		// err := queries.ClearMeta(context.Background())
-		// if err != nil {
-		// 	return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-		// 		"error": err.Error(),
-		// 	})
-		// }
-
-		err = queries.ClearStorage(context.Background())
-		if err != nil {
-			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": err.Error(),
-			})
+		if err := loads.Clear(ctx.UserContext()); err != nil {
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 		}
-
 		return ctx.SendString("Cleared")
 	})
 
 	app.Post("/init", func(ctx *fiber.Ctx) error {
-		err := queries.OltpToStage(context.Background())
-		if err != nil {
-			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error OltpToStage": err.Error(),
-			})
+		if err := loads.Full(ctx.UserContext()); err != nil {
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 		}
-
-		err = queries.StageToOlap(context.Background())
-		if err != nil {
-			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error StageToOlap": err.Error(),
-			})
-		}
-
 		return ctx.SendString("Initialized")
 	})
 
 	app.Get("/stage", func(ctx *fiber.Ctx) error {
-		err := queries.OlapToStageIncremental(context.Background())
+		stage, err := loads.DetectChanges(ctx.UserContext())
 		if err != nil {
-			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		}
-
-		stage, err := queries.GetStageData(context.Background())
-		if err != nil {
-			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": err.Error(),
-			})
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 		}
 		return ctx.JSON(stage)
 	})
 
 	app.Post("/incremental", func(ctx *fiber.Ctx) error {
-		err := queries.OlapToStageIncremental(context.Background())
-		if err != nil {
-			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": err.Error(),
-			})
+		if err := loads.Incremental(ctx.UserContext()); err != nil {
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 		}
-		data, err := queries.GetStageData(context.Background())
-		if err != nil {
-			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		}
-
-		// count changed rows
-		changed := 0
-		for _, row := range data {
-			changed += int(row.RowCount)
-		}
-
-		// count chabged tables
-		tables := 0
-		for _, row := range data {
-			if row.RowCount > 0 {
-				tables++
-			}
-		}
-
-		err = queries.StageToOlapIncremental(context.Background())
-		if err != nil {
-			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		}
-
-		dlid, err := queries.GetLastDataLoadHistoryID(context.Background())
-		if err != nil {
-			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		}
-
-		err = queries.UpdateDataLoadHistory(context.Background(), dbs.UpdateDataLoadHistoryParams{
-			LoadRows: sql.NullInt32{
-				Int32: int32(changed),
-				Valid: true,
-			},
-			AffectedTableCount: sql.NullInt32{
-				Int32: int32(tables),
-				Valid: true,
-			},
-			DataLoadHistoryID: int32(dlid),
-		})
-
-		if err != nil {
-			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		}
-
 		return ctx.SendString("Incremental")
 	})
 
