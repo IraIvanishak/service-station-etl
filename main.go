@@ -8,30 +8,32 @@ import (
 	"time"
 
 	"github.com/IraIvanishak/service-station-etl/dto"
+	"github.com/IraIvanishak/service-station-etl/internal/config"
 	"github.com/IraIvanishak/service-station-etl/storage/dbs"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	_ "github.com/lib/pq"
 )
 
-const dataSourceName = "postgresql://postgres:postgres@localhost:5432/service_station?sslmode=disable"
-
 var queries *dbs.Queries
 
 func main() {
+	cfg := config.Load()
 	app := fiber.New()
 
-	connection, err := sql.Open("postgres", dataSourceName)
+	connection, err := sql.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
 		log.Fatal("Unable to connect to database:", err)
 	}
 	defer connection.Close()
+	if err := connection.Ping(); err != nil {
+		log.Fatalf("Database is not reachable (DATABASE_URL): %v", err)
+	}
 
 	queries = dbs.New(connection)
 	app.Use(cors.New(cors.Config{
-		AllowHeaders: "Origin,Content-Type,Accept,Content-Length,Accept-Language,Accept-Encoding,Connection,Access-Control-Allow-Origin",
-		AllowOrigins: "*",
-		AllowMethods: "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
+		AllowOrigins: cfg.CORSOrigins,
+		AllowMethods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
 	}))
 
 	app.Get("/city", func(ctx *fiber.Ctx) error {
@@ -847,5 +849,5 @@ func main() {
 		return ctx.JSON(repairService)
 	})
 
-	app.Listen(":3000")
+	log.Fatal(app.Listen(cfg.Addr))
 }
