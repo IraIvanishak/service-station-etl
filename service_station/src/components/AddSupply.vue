@@ -325,6 +325,7 @@ button {
 </template>
 
 <script>
+import { API_URL } from '@/api';
 export default {
     data() {
         return {
@@ -348,7 +349,7 @@ export default {
             try {
                 this.newSupply.supplyDate = new Date(this.newSupply.supplyDate).toISOString();
                 console.log(JSON.stringify(this.newSupply))
-                const response = await fetch('http://localhost:3000/supplies', {
+                const response = await fetch(`${API_URL}/supplies`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -373,7 +374,7 @@ export default {
             this.newSupply = { status: '', details: [] };
 
             try {
-                const response = await fetch('http://localhost:3000/suppliers');
+                const response = await fetch(`${API_URL}/suppliers`);
                 const suppliers = await response.json();
                 this.suppliers = suppliers;
             } catch (error) {
@@ -381,7 +382,7 @@ export default {
             }
 
             try {
-                const response = await fetch('http://localhost:3000/employees');
+                const response = await fetch(`${API_URL}/employees`);
                 const managers = await response.json();
                 this.managers = managers;
             } catch (error) {
@@ -389,7 +390,7 @@ export default {
             }
 
             try {
-                const response = await fetch('http://localhost:3000/stations');
+                const response = await fetch(`${API_URL}/stations`);
                 const stations = await response.json();
                 this.stations = stations;
             } catch (error) {
@@ -397,7 +398,7 @@ export default {
             }
 
             try {
-                const response = await fetch('http://localhost:3000/details');
+                const response = await fetch(`${API_URL}/details`);
                 const details = await response.json();
                 this.details = details;
             } catch (error) {

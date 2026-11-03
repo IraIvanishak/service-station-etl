@@ -79,6 +79,7 @@ i {
 </style>
 
 <script>
+import { API_URL } from '@/api';
 export default {
     data() {
         return {
@@ -104,21 +105,21 @@ export default {
     },
     methods: {
         fetchEmployees() {
-            fetch('http://localhost:3000/stations')
+            fetch(`${API_URL}/stations`)
                 .then(response => response.json())
                 .then(data => {
                     this.uniqueStations = data.map(station => station.Address);
                 })
                 .catch(error => console.error('Error fetching stations:', error));
 
-            fetch('http://localhost:3000/roles')
+            fetch(`${API_URL}/roles`)
                 .then(response => response.json())
                 .then(data => {
                     this.uniqueRoles = data.map(role => role.Name);
                 })
                 .catch(error => console.error('Error fetching roles:', error));
 
-            fetch('http://localhost:3000/employees-full')
+            fetch(`${API_URL}/employees-full`)
                 .then(response => response.json())
                 .then(data => {
                     this.employees = data;

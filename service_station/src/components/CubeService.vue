@@ -79,6 +79,7 @@
 
 
 <script>
+import { API_URL } from '@/api';
 import axios from 'axios';
 
 export default {
@@ -165,7 +166,7 @@ export default {
             this.uniqueFilters.InventoryDescription = [...new Set(data.map(item => item.InventoryDescription).filter(Boolean))];
         },
         fetchInventoryData() {
-            axios.get('http://localhost:3000/service-invenroty-cube')
+            axios.get(`${API_URL}/service-invenroty-cube`)
                 .then(response => {
                     this.inventoryData = response.data;
                     this.updateUniqueFilters();
