@@ -43,6 +43,26 @@ func TestFullLoadFillsDimensions(t *testing.T) {
 	}
 }
 
+// The load history must record the rows written to all warehouse tables.
+func TestFullLoadRecordsTotalRowCount(t *testing.T) {
+	db := testDB(t)
+	run(t, etl.NewRunner(db).Full)
+
+	want := scalar[int](t, db, `
+		SELECT (SELECT count(*) FROM storage.date_dim)
+		     + (SELECT count(*) FROM storage.inventory_dim)
+		     + (SELECT count(*) FROM storage.service_dim)
+		     + (SELECT count(*) FROM storage.supplier_dim)
+		     + (SELECT count(*) FROM storage.repair_dim)
+		     + (SELECT count(*) FROM storage.service_repair_dim)
+		     + (SELECT count(*) FROM storage.service_inventory_fact)
+		     + (SELECT count(*) FROM storage.supply_details_fact)`)
+	got := scalar[int](t, db, "SELECT load_rows FROM meta.dataloadhistory")
+	if got != want {
+		t.Errorf("load_rows = %d, want %d (rows in all warehouse tables)", got, want)
+	}
+}
+
 // In the seed data inventory_id happens to equal detail_id. Stock the same
 // detail at a second station so they differ, and use that stock in a repair.
 func TestFullLoadKeysPartsUsageByDetail(t *testing.T) {

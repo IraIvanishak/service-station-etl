@@ -4,6 +4,7 @@ AS $$
 DECLARE
     meta_start_time TIMESTAMP := clock_timestamp();
     row_count BIGINT := 0;
+    inserted_count BIGINT := 0;
     db_table_count INT := 0;
 BEGIN
     -- Truncating existing data
@@ -22,7 +23,8 @@ BEGIN
     FROM stage.supplier
     ON CONFLICT (bk_supplier_id) DO NOTHING;
 
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+    GET DIAGNOSTICS inserted_count = ROW_COUNT;
+    row_count := row_count + inserted_count;
     db_table_count := db_table_count + 1;
 
     -- Inserting data into service_dim
@@ -37,7 +39,8 @@ BEGIN
     FROM stage.service
     ON CONFLICT (bk_service_id) DO NOTHING;
 
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+    GET DIAGNOSTICS inserted_count = ROW_COUNT;
+    row_count := row_count + inserted_count;
     db_table_count := db_table_count + 1;
 
     -- Inserting data into inventory_dim 
@@ -54,7 +57,8 @@ BEGIN
     -- at several stations and dropped details that are not in stock.
     FROM stage.detail AS d;
 
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+    GET DIAGNOSTICS inserted_count = ROW_COUNT;
+    row_count := row_count + inserted_count;
     db_table_count := db_table_count + 1;
 
     -- Inserting data into date_dim
@@ -79,7 +83,8 @@ BEGIN
         AND "day" = EXTRACT(DAY FROM date_field)
     );
 
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+    GET DIAGNOSTICS inserted_count = ROW_COUNT;
+    row_count := row_count + inserted_count;
     db_table_count := db_table_count + 1;
 
     -- Inserting data into repair_dim
@@ -93,7 +98,8 @@ BEGIN
     FROM stage.repair r
     LEFT JOIN storage.date_dim dd ON r.start_date::date = (dd."year" || '-' || dd."month" || '-' || dd."day")::date;
 
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+    GET DIAGNOSTICS inserted_count = ROW_COUNT;
+    row_count := row_count + inserted_count;
     db_table_count := db_table_count + 1;
 
     -- Inserting data into service_repair_dim
@@ -111,7 +117,8 @@ BEGIN
     JOIN storage.repair_dim rd ON sr.repair_id = rd.bk_repair_id
     LEFT JOIN storage.date_dim dd ON sr.completion_date = (dd."year" || '-' || dd."month" || '-' || dd."day")::date;
 
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+    GET DIAGNOSTICS inserted_count = ROW_COUNT;
+    row_count := row_count + inserted_count;
     db_table_count := db_table_count + 1;
 
     -- Inserting data into service_inventory_fact
@@ -157,7 +164,8 @@ BEGIN
     JOIN stage.repair r ON sr.repair_id = r.repair_id
     JOIN count_estimated_duration ed ON sr.repair_id = ed.repair_id;
 
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+    GET DIAGNOSTICS inserted_count = ROW_COUNT;
+    row_count := row_count + inserted_count;
     db_table_count := db_table_count + 1;
 
     -- Inserting data into supply_details_fact
@@ -221,7 +229,8 @@ BEGIN
         st.start_date_dim_id,
         ed.end_date_dim_id; 
 
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+    GET DIAGNOSTICS inserted_count = ROW_COUNT;
+    row_count := row_count + inserted_count;
     db_table_count := db_table_count + 1;
 
     -- Record load activity in the metadata database
