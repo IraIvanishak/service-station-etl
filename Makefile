@@ -2,7 +2,7 @@ DB_URL ?= postgres://postgres:postgres@localhost:5452/service_station?sslmode=di
 # Maintenance database on the same server; integration tests clone a template from it.
 TEST_DB_URL ?= postgres://postgres:postgres@localhost:5452/postgres?sslmode=disable
 
-.PHONY: db-up db-reset db-psql api test test-integration sqlc
+.PHONY: db-up db-reset db-psql api web test test-integration sqlc
 
 db-up: ## Start Postgres; the first start creates schemas, seed data and ETL procedures
 	docker compose up -d --wait
@@ -16,6 +16,9 @@ db-psql: ## Open psql in the database container
 
 api: ## Run the API on :3000
 	DATABASE_URL="$(DB_URL)" go run .
+
+web: ## Run the Vue dev server on :5173
+	cd service_station && { [ -d node_modules ] || npm ci; } && npm run dev
 
 test: ## Unit tests
 	go test ./...
