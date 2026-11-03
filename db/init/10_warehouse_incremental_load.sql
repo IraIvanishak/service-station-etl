@@ -1,17 +1,16 @@
-CREATE OR REPLACE PROCEDURE fill_storage_from_stage()
+CREATE OR REPLACE PROCEDURE storage.fill_olap_from_staging_incremental()
 LANGUAGE plpgsql
 AS $$
 DECLARE
     meta_start_time TIMESTAMP := clock_timestamp();
     row_count BIGINT := 0;
+    inserted_count BIGINT := 0;
+    updated_count BIGINT := 0;
     db_table_count INT := 0;
 BEGIN
-    -- Truncating existing data
-    TRUNCATE TABLE storage.date_dim, storage.inventory_dim, storage.service_dim, 
-           storage.supplier_dim, storage.repair_dim, storage.service_repair_dim,
-           storage.supply_details_fact, storage.service_inventory_fact RESTART IDENTITY CASCADE;
 
     -- Inserting data into supplier_dim
+    -- !!!!!!!!!!!!!
     INSERT INTO storage.supplier_dim (supplier_dim_id, bk_supplier_id, name, phone_number, address)
     SELECT 
         supplier_id AS supplier_dim_id, 
@@ -20,12 +19,19 @@ BEGIN
         phone_number, 
         address
     FROM stage.supplier
-    ON CONFLICT (bk_supplier_id) DO NOTHING;
+    ON CONFLICT (bk_supplier_id) DO UPDATE SET
+        name = EXCLUDED.name,
+        phone_number = EXCLUDED.phone_number,
+        address = EXCLUDED.address;
 
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    GET DIAGNOSTICS inserted_count = ROW_COUNT;
+    row_count := row_count + inserted_count;
     db_table_count := db_table_count + 1;
+    
 
     -- Inserting data into service_dim
+    --- !!!!!!!!!!!!
     INSERT INTO storage.service_dim (service_dim_id, bk_service_id, name, description, price, estimated_duration)
     SELECT 
         service_id AS service_dim_id,
@@ -35,12 +41,19 @@ BEGIN
         price, 
         estimated_duration
     FROM stage.service
-    ON CONFLICT (bk_service_id) DO NOTHING;
+    ON CONFLICT (bk_service_id) DO UPDATE SET
+        service_dim_id = EXCLUDED.service_dim_id,
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        price = EXCLUDED.price,
+        estimated_duration = EXCLUDED.estimated_duration;
 
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+    GET DIAGNOSTICS inserted_count = ROW_COUNT;
+    row_count := row_count + inserted_count;
     db_table_count := db_table_count + 1;
 
     -- Inserting data into inventory_dim 
+    -- !!!!!!!!!!!!
     INSERT INTO storage.inventory_dim (inventory_dim_id, bk_detail_id, description, article, price, dimensions, weight)
     SELECT 
         d.detail_id AS inventory_dim_id, 
@@ -51,12 +64,22 @@ BEGIN
         d.dimensions, 
         d.weight
     FROM stage.inventory AS i
-    JOIN stage.detail AS d ON i.detail_id = d.detail_id;
+    JOIN stage.detail AS d ON i.detail_id = d.detail_id
+    ON CONFLICT (bk_detail_id) DO UPDATE SET
+        description = EXCLUDED.description,
+        article = EXCLUDED.article,
+        price = EXCLUDED.price,
+        dimensions = EXCLUDED.dimensions,
+        weight = EXCLUDED.weight;
 
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    GET DIAGNOSTICS inserted_count = ROW_COUNT;
+    row_count := row_count + inserted_count;
     db_table_count := db_table_count + 1;
 
+
     -- Inserting data into date_dim
+    -- !
     INSERT INTO storage.date_dim ("year", "month", "day")
     SELECT DISTINCT
         EXTRACT(YEAR FROM date_field) AS "year",
@@ -78,10 +101,13 @@ BEGIN
         AND "day" = EXTRACT(DAY FROM date_field)
     );
 
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+    GET DIAGNOSTICS inserted_count = ROW_COUNT;
+    row_count := row_count + inserted_count;
     db_table_count := db_table_count + 1;
 
+
     -- Inserting data into repair_dim
+    -- !!!!!!!!!!!!
     INSERT INTO storage.repair_dim (repair_dim_id, bk_repair_id, notes, repair_number, start_repair_date_dim_id)
     SELECT
         r.repair_id AS repair_dim_id,
@@ -90,12 +116,20 @@ BEGIN
         r.repair_number,
         dd.date_id AS start_repair_date_dim_id
     FROM stage.repair r
-    LEFT JOIN storage.date_dim dd ON r.start_date::date = (dd."year" || '-' || dd."month" || '-' || dd."day")::date;
+    LEFT JOIN storage.date_dim dd ON r.start_date::date = (dd."year" || '-' || dd."month" || '-' || dd."day")::date
+    ON CONFLICT (bk_repair_id) DO UPDATE SET
+        repair_dim_id = EXCLUDED.repair_dim_id,
+        notes = EXCLUDED.notes,
+        repair_number = EXCLUDED.repair_number,
+        start_repair_date_dim_id = EXCLUDED.start_repair_date_dim_id;
 
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+    GET DIAGNOSTICS inserted_count = ROW_COUNT;
+    row_count := row_count + inserted_count;
     db_table_count := db_table_count + 1;
 
+
     -- Inserting data into service_repair_dim
+    -- !!!!!!!!!!!!
     INSERT INTO storage.service_repair_dim (service_repair_dim_id, service_id, repair_id, quantity, service_total_price, complete_date_dim_id, bk_service_repair)
     SELECT
         sr.service_repairs_id,
@@ -108,13 +142,23 @@ BEGIN
     FROM stage.service_repair sr
     JOIN storage.service_dim sd ON sr.service_id = sd.bk_service_id
     JOIN storage.repair_dim rd ON sr.repair_id = rd.bk_repair_id
-    LEFT JOIN storage.date_dim dd ON sr.completion_date = (dd."year" || '-' || dd."month" || '-' || dd."day")::date;
+    LEFT JOIN storage.date_dim dd ON sr.completion_date = (dd."year" || '-' || dd."month" || '-' || dd."day")::date
+    ON CONFLICT (bk_service_repair) DO UPDATE SET
+        service_repair_dim_id = EXCLUDED.service_repair_dim_id,
+        service_id = EXCLUDED.service_id,
+        repair_id = EXCLUDED.repair_id,
+        quantity = EXCLUDED.quantity,
+        service_total_price = EXCLUDED.service_total_price,
+        complete_date_dim_id = EXCLUDED.complete_date_dim_id;
 
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+    GET DIAGNOSTICS inserted_count = ROW_COUNT;
+    row_count := row_count + inserted_count;
     db_table_count := db_table_count + 1;
 
+
     -- Inserting data into service_inventory_fact
-    WITH count_estimated_duration AS (
+    -- !!!!!!!!!!!!
+      WITH count_estimated_duration AS (
         SELECT 
             sr.repair_id, 
             SUM(s.estimated_duration * sr.quantity) AS total_estimated_duration
@@ -153,25 +197,38 @@ BEGIN
     JOIN stage.detail d ON i.detail_id = d.detail_id
     JOIN stage.service s ON sr.service_id = s.service_id
     JOIN stage.repair r ON sr.repair_id = r.repair_id
-    JOIN count_estimated_duration ed ON sr.repair_id = ed.repair_id;
+    JOIN count_estimated_duration ed ON sr.repair_id = ed.repair_id
+    ON CONFLICT (bk_service_inventory_id) DO UPDATE SET
+        service_repair_dim_id = EXCLUDED.service_repair_dim_id,
+        inventory_dim_id = EXCLUDED.inventory_dim_id,
+        parts_cost = EXCLUDED.parts_cost,
+        total_cost = EXCLUDED.total_cost,
+        parts_cost_percentage = EXCLUDED.parts_cost_percentage,
+        actual_service_duration = EXCLUDED.actual_service_duration,
+        estimated_service_duration = EXCLUDED.estimated_service_duration,
+        service_duration_deviation = EXCLUDED.service_duration_deviation,
+        amount = EXCLUDED.amount;
 
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    GET DIAGNOSTICS inserted_count = ROW_COUNT;
+    row_count := row_count + inserted_count;
     db_table_count := db_table_count + 1;
+
 
     -- Inserting data into supply_details_fact
     WITH supply_data AS (
-        SELECT
-            d.detail_id AS inventory_dim_id,
-            s.supply_id,
-            sup.supplier_id,
-            s.supply_date,
-            sd.quantity,
-            sd.price_per_unit
-        FROM stage.supply_details sd
-        JOIN stage.supply s ON sd.supply_id = s.supply_id
-        JOIN stage.supplier sup ON s.supplier_id = sup.supplier_id
-        JOIN stage.detail d ON sd.detail_id = d.detail_id
-        JOIN storage.inventory_dim inv ON d.detail_id = inv.bk_detail_id
+    SELECT
+        d.detail_id AS inventory_dim_id,
+        s.supply_id,
+        sup.supplier_id,
+        s.supply_date,
+        sd.quantity,
+        sd.price_per_unit
+    FROM stage.supply_details sd
+    JOIN stage.supply s ON sd.supply_id = s.supply_id
+    JOIN stage.supplier sup ON s.supplier_id = sup.supplier_id
+    JOIN stage.detail d ON sd.detail_id = d.detail_id
+    JOIN storage.inventory_dim inv ON d.detail_id = inv.bk_detail_id
     ),
     start_dates AS (
         SELECT 
@@ -214,10 +271,16 @@ BEGIN
         sd.inventory_dim_id, 
         sd.supplier_id,
         st.start_date_dim_id,
-        ed.end_date_dim_id; 
+        ed.end_date_dim_id
+    ON CONFLICT (detail_dim_id, supplier_id, start_date_dim_id, end_date_dim_id) DO UPDATE SET
+        detail_quantity = EXCLUDED.detail_quantity,
+        detail_total_cost = EXCLUDED.detail_total_cost;
 
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    GET DIAGNOSTICS inserted_count = ROW_COUNT;
+    row_count := row_count + inserted_count;
     db_table_count := db_table_count + 1;
+
 
     -- Record load activity in the metadata database
     INSERT INTO meta.dataloadhistory(load_datetime, load_time, load_rows, affected_table_count, source_table_count)
@@ -238,7 +301,3 @@ BEGIN
     RAISE NOTICE 'Data load completed with, affecting % rows across % tables.', row_count, db_table_count;
 END;
 $$;
-
--- Call the procedure
-CALL fill_storage_from_stage();
-    

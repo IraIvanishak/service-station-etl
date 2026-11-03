@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE fill_staging_from_oltp_incremental()
+CREATE OR REPLACE PROCEDURE stage.fill_staging_from_oltp_incremental()
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -112,5 +112,3 @@ begin
 
 END;
 $$;
-
-CALL fill_staging_from_oltp_incremental();

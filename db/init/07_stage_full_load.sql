@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE transfer_data_to_stage()
+CREATE OR REPLACE PROCEDURE stage.transfer_data_to_stage()
 LANGUAGE plpgsql
 AS $$
 BEGIN
@@ -60,7 +60,3 @@ BEGIN
     RAISE NOTICE 'Data transfer to stage schema completed successfully.';
 END;
 $$;
-
-CALL transfer_data_to_stage();
-
-

@@ -1,5 +1,3 @@
--- DROP PROCEDURE "storage".clearstorage();
-
 CREATE OR REPLACE PROCEDURE storage.clearstorage()
  LANGUAGE plpgsql
 AS $procedure$

@@ -1,6 +1,8 @@
+CREATE SCHEMA IF NOT EXISTS meta;
+
 -- Створення таблиці для відстеження історії завантаження даних
 CREATE TABLE meta.dataloadhistory (
-    data_load_history_id integer PRIMARY KEY,
+    data_load_history_id serial4 PRIMARY KEY,
     load_datetime timestamp without time zone,
     load_time time without time zone,
     load_rows integer,
@@ -10,7 +12,7 @@ CREATE TABLE meta.dataloadhistory (
 
 -- Створення таблиці для опису таблиць у сховищі даних
 CREATE TABLE meta.dwtable (
-    dw_table_id integer PRIMARY KEY,
+    dw_table_id serial4 PRIMARY KEY,
     data_load_history_id integer,
     dw_table_name character varying,
     FOREIGN KEY (data_load_history_id) REFERENCES meta.dataloadhistory(data_load_history_id)
@@ -18,13 +20,13 @@ CREATE TABLE meta.dwtable (
 
 -- Створення таблиці для опису бази даних джерела
 CREATE TABLE meta.sourcedb (
-    source_db_id integer PRIMARY KEY,
+    source_db_id serial4 PRIMARY KEY,
     source_db_name character varying
 );
 
 -- Створення таблиці для опису таблиць джерела даних
 CREATE TABLE meta.sourcetable (
-    source_table_id integer PRIMARY KEY,
+    source_table_id serial4 PRIMARY KEY,
     source_db_id integer,
     key_name character varying,
     source_table_name character varying,
@@ -33,7 +35,7 @@ CREATE TABLE meta.sourcetable (
 
 -- Створення таблиці для опису вимірювань (вимірювальних таблиць)
 CREATE TABLE meta.dimension (
-    dimension_id integer PRIMARY KEY,
+    dimension_id serial4 PRIMARY KEY,
     dw_table_id integer,
     key_name character varying,
     dimension_type character varying,
@@ -41,23 +43,24 @@ CREATE TABLE meta.dimension (
     FOREIGN KEY (dw_table_id) REFERENCES meta.dwtable(dw_table_id)
 );
 
--- Створення таблиці для опису атрибутів вимірювань
-CREATE TABLE meta.dimensionattributes (
-    dimension_id integer,
-    dw_attribute_column_id integer,
-    FOREIGN KEY (dimension_id) REFERENCES meta.dimension(dimension_id)
-);
-
 -- Створення таблиці для опису колонок атрибутів
 CREATE TABLE meta.dwattributecolumn (
-    dw_attribute_column_id integer PRIMARY KEY,
+    dw_attribute_column_id serial4 PRIMARY KEY,
     dw_attribute_column_name character varying,
     dw_attribute_column_datatype character varying
 );
 
+-- Створення таблиці для опису атрибутів вимірювань
+CREATE TABLE meta.dimensionattributes (
+    dimension_id integer,
+    dw_attribute_column_id integer,
+    FOREIGN KEY (dimension_id) REFERENCES meta.dimension(dimension_id),
+    FOREIGN KEY (dw_attribute_column_id) REFERENCES meta.dwattributecolumn(dw_attribute_column_id)
+
+);
 -- Створення таблиці для опису фактів
 CREATE TABLE meta.fact (
-    fact_id integer PRIMARY KEY,
+    fact_id serial4 PRIMARY KEY,
     key_name character varying,
     dw_table_id integer,
     fact_type character varying,
@@ -66,7 +69,7 @@ CREATE TABLE meta.fact (
 
 -- Створення таблиці для опису метрик фактів
 CREATE TABLE meta.factmetric (
-    fact_metric_id integer PRIMARY KEY,
+    fact_metric_id serial4 PRIMARY KEY,
     fact_id integer,
     dw_attribute_column_id integer,
     fact_metric_description character varying,
@@ -76,7 +79,7 @@ CREATE TABLE meta.factmetric (
 
 -- Створення таблиці для опису колонок джерела
 CREATE TABLE meta.sourcecolumn (
-    source_column_id integer PRIMARY KEY,
+    source_column_id serial4 PRIMARY KEY,
     source_table_id integer,
     source_column_name character varying,
     data_type character varying,
@@ -85,7 +88,7 @@ CREATE TABLE meta.sourcecolumn (
 
 -- Створення таблиці для опису трансформацій
 CREATE TABLE meta.transformation (
-    transformation_id integer PRIMARY KEY,
+    transformation_id serial4 PRIMARY KEY,
     dw_attribute_column_id integer,
     transformation_rule character varying,
     source_column_id integer,

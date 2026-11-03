@@ -1,11 +1,3 @@
--- public.brand definition
-
--- Drop table
--- DROP SCHEMA meta;
-
-CREATE SCHEMA meta AUTHORIZATION postgres;
--- DROP TABLE public.brand;
-
 CREATE TABLE public.brand (
 	brand_id serial4 NOT NULL,
 	"name" varchar(255) NOT NULL,
@@ -14,13 +6,6 @@ CREATE TABLE public.brand (
 	CONSTRAINT brand_pkey PRIMARY KEY (brand_id)
 );
 
-
--- public.characteristic definition
-
--- Drop table
-
--- DROP TABLE public.characteristic;
-
 CREATE TABLE public.characteristic (
 	characteristic_id serial4 NOT NULL,
 	"name" varchar(255) NOT NULL,
@@ -28,13 +13,6 @@ CREATE TABLE public.characteristic (
 	updated_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT characteristic_pkey PRIMARY KEY (characteristic_id)
 );
-
-
--- public.client definition
-
--- Drop table
-
--- DROP TABLE public.client;
 
 CREATE TABLE public.client (
 	client_id serial4 NOT NULL,
@@ -46,13 +24,6 @@ CREATE TABLE public.client (
 	CONSTRAINT client_pkey PRIMARY KEY (client_id)
 );
 
-
--- public.country definition
-
--- Drop table
-
--- DROP TABLE public.country;
-
 CREATE TABLE public.country (
 	country_id serial4 NOT NULL,
 	"name" varchar(255) NOT NULL,
@@ -60,13 +31,6 @@ CREATE TABLE public.country (
 	updated_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT country_pkey PRIMARY KEY (country_id)
 );
-
-
--- public.detail_group definition
-
--- Drop table
-
--- DROP TABLE public.detail_group;
 
 CREATE TABLE public.detail_group (
 	detail_group_id serial4 NOT NULL,
@@ -76,13 +40,6 @@ CREATE TABLE public.detail_group (
 	CONSTRAINT detail_group_pkey PRIMARY KEY (detail_group_id)
 );
 
-
--- public.employee_role definition
-
--- Drop table
-
--- DROP TABLE public.employee_role;
-
 CREATE TABLE public.employee_role (
 	role_id serial4 NOT NULL,
 	"name" varchar(255) NOT NULL,
@@ -90,13 +47,6 @@ CREATE TABLE public.employee_role (
 	updated_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT employee_role_pkey PRIMARY KEY (role_id)
 );
-
-
--- public.payment_status definition
-
--- Drop table
-
--- DROP TABLE public.payment_status;
 
 CREATE TABLE public.payment_status (
 	status_id serial4 NOT NULL,
@@ -106,13 +56,6 @@ CREATE TABLE public.payment_status (
 	CONSTRAINT payment_status_pkey PRIMARY KEY (status_id)
 );
 
-
--- public.repair_status definition
-
--- Drop table
-
--- DROP TABLE public.repair_status;
-
 CREATE TABLE public.repair_status (
 	status_id serial4 NOT NULL,
 	title varchar(255) NOT NULL,
@@ -121,30 +64,16 @@ CREATE TABLE public.repair_status (
 	CONSTRAINT repair_status_pkey PRIMARY KEY (status_id)
 );
 
-
--- public.service definition
-
--- Drop table
-
--- DROP TABLE public.service;
-
 CREATE TABLE public.service (
 	service_id serial4 NOT NULL,
 	"name" varchar(255) NOT NULL,
 	description text NULL,
 	price numeric(10, 2) NULL,
-	estimated_duration varchar(255) NULL,
+	estimated_duration interval NULL,
 	created_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
 	updated_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT service_pkey PRIMARY KEY (service_id)
 );
-
-
--- public.supply_status definition
-
--- Drop table
-
--- DROP TABLE public.supply_status;
 
 CREATE TABLE public.supply_status (
 	status_id serial4 NOT NULL,
@@ -153,13 +82,6 @@ CREATE TABLE public.supply_status (
 	updated_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT supply_status_pkey PRIMARY KEY (status_id)
 );
-
-
--- public.car definition
-
--- Drop table
-
--- DROP TABLE public.car;
 
 CREATE TABLE public.car (
 	car_id serial4 NOT NULL,
@@ -172,13 +94,6 @@ CREATE TABLE public.car (
 	CONSTRAINT car_pkey PRIMARY KEY (car_id),
 	CONSTRAINT car_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES public.brand(brand_id)
 );
-
-
--- public.car_client definition
-
--- Drop table
-
--- DROP TABLE public.car_client;
 
 CREATE TABLE public.car_client (
 	car_client_id serial4 NOT NULL,
@@ -195,13 +110,6 @@ CREATE TABLE public.car_client (
 	CONSTRAINT car_client_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.client(client_id)
 );
 
-
--- public.city definition
-
--- Drop table
-
--- DROP TABLE public.city;
-
 CREATE TABLE public.city (
 	city_id serial4 NOT NULL,
 	"name" varchar(255) NOT NULL,
@@ -211,13 +119,6 @@ CREATE TABLE public.city (
 	CONSTRAINT city_pkey PRIMARY KEY (city_id),
 	CONSTRAINT city_country_id_fkey FOREIGN KEY (country_id) REFERENCES public.country(country_id)
 );
-
-
--- public.detail_type definition
-
--- Drop table
-
--- DROP TABLE public.detail_type;
 
 CREATE TABLE public.detail_type (
 	detail_type_id serial4 NOT NULL,
@@ -229,13 +130,6 @@ CREATE TABLE public.detail_type (
 	CONSTRAINT detail_type_detail_group_id_fkey FOREIGN KEY (detail_group_id) REFERENCES public.detail_group(detail_group_id)
 );
 
-
--- public.manufacturer definition
-
--- Drop table
-
--- DROP TABLE public.manufacturer;
-
 CREATE TABLE public.manufacturer (
 	manufacturer_id serial4 NOT NULL,
 	country_id int4 NULL,
@@ -246,13 +140,6 @@ CREATE TABLE public.manufacturer (
 	CONSTRAINT manufacturer_country_id_fkey FOREIGN KEY (country_id) REFERENCES public.country(country_id)
 );
 
-
--- public.service_station definition
-
--- Drop table
-
--- DROP TABLE public.service_station;
-
 CREATE TABLE public.service_station (
 	station_id serial4 NOT NULL,
 	address text NOT NULL,
@@ -262,13 +149,6 @@ CREATE TABLE public.service_station (
 	CONSTRAINT service_station_pkey PRIMARY KEY (station_id),
 	CONSTRAINT service_station_city_id_fkey FOREIGN KEY (city_id) REFERENCES public.city(city_id)
 );
-
-
--- public.supplier definition
-
--- Drop table
-
--- DROP TABLE public.supplier;
 
 CREATE TABLE public.supplier (
 	supplier_id serial4 NOT NULL,
@@ -281,13 +161,6 @@ CREATE TABLE public.supplier (
 	CONSTRAINT supplier_pkey PRIMARY KEY (supplier_id),
 	CONSTRAINT supplier_city_id_fkey FOREIGN KEY (city_id) REFERENCES public.city(city_id)
 );
-
-
--- public.detail definition
-
--- Drop table
-
--- DROP TABLE public.detail;
 
 CREATE TABLE public.detail (
 	detail_id serial4 NOT NULL,
@@ -305,13 +178,6 @@ CREATE TABLE public.detail (
 	CONSTRAINT detail_manufacturer_id_fkey FOREIGN KEY (manufacturer_id) REFERENCES public.manufacturer(manufacturer_id)
 );
 
-
--- public.detail_characteristic definition
-
--- Drop table
-
--- DROP TABLE public.detail_characteristic;
-
 CREATE TABLE public.detail_characteristic (
 	characteristic_id int4 NOT NULL,
 	detail_id int4 NOT NULL,
@@ -322,13 +188,6 @@ CREATE TABLE public.detail_characteristic (
 	CONSTRAINT detail_characteristic_characteristic_id_fkey FOREIGN KEY (characteristic_id) REFERENCES public.characteristic(characteristic_id),
 	CONSTRAINT detail_characteristic_detail_id_fkey FOREIGN KEY (detail_id) REFERENCES public.detail(detail_id)
 );
-
-
--- public.employee definition
-
--- Drop table
-
--- DROP TABLE public.employee;
 
 CREATE TABLE public.employee (
 	employee_id serial4 NOT NULL,
@@ -344,13 +203,6 @@ CREATE TABLE public.employee (
 	CONSTRAINT employee_service_station_id_fkey FOREIGN KEY (service_station_id) REFERENCES public.service_station(station_id)
 );
 
-
--- public.inventory definition
-
--- Drop table
-
--- DROP TABLE public.inventory;
-
 CREATE TABLE public.inventory (
 	inventory_id serial4 NOT NULL,
 	detail_id int4 NULL,
@@ -362,13 +214,6 @@ CREATE TABLE public.inventory (
 	CONSTRAINT inventory_detail_id_fkey FOREIGN KEY (detail_id) REFERENCES public.detail(detail_id),
 	CONSTRAINT inventory_service_station_id_fkey FOREIGN KEY (service_station_id) REFERENCES public.service_station(station_id)
 );
-
-
--- public.repair_order definition
-
--- Drop table
-
--- DROP TABLE public.repair_order;
 
 CREATE TABLE public.repair_order (
 	repair_id serial4 NOT NULL,
@@ -389,13 +234,6 @@ CREATE TABLE public.repair_order (
 	CONSTRAINT repair_status_id_fkey FOREIGN KEY (repair_status_id) REFERENCES public.repair_status(status_id)
 );
 
-
--- public.service_repairs definition
-
--- Drop table
-
--- DROP TABLE public.service_repairs;
-
 CREATE TABLE public.service_repairs (
 	service_repairs_id serial4 NOT NULL,
 	service_id int4 NULL,
@@ -409,13 +247,6 @@ CREATE TABLE public.service_repairs (
 	CONSTRAINT service_repairs_repair_id_fkey FOREIGN KEY (repair_id) REFERENCES public.repair_order(repair_id),
 	CONSTRAINT service_repairs_service_id_fkey FOREIGN KEY (service_id) REFERENCES public.service(service_id)
 );
-
-
--- public.supply definition
-
--- Drop table
-
--- DROP TABLE public.supply;
 
 CREATE TABLE public.supply (
 	supply_id serial4 NOT NULL,
@@ -433,13 +264,6 @@ CREATE TABLE public.supply (
 	CONSTRAINT supply_supplier_id_fkey FOREIGN KEY (supplier_id) REFERENCES public.supplier(supplier_id)
 );
 
-
--- public.supply_details definition
-
--- Drop table
-
--- DROP TABLE public.supply_details;
-
 CREATE TABLE public.supply_details (
 	supply_details_id serial4 NOT NULL,
 	detail_id int4 NULL,
@@ -453,13 +277,6 @@ CREATE TABLE public.supply_details (
 	CONSTRAINT supply_details_supply_id_fkey FOREIGN KEY (supply_id) REFERENCES public.supply(supply_id)
 );
 
-
--- public.supply_invoice definition
-
--- Drop table
-
--- DROP TABLE public.supply_invoice;
-
 CREATE TABLE public.supply_invoice (
 	supply_invoice_id serial4 NOT NULL,
 	supply_details_id int4 NULL,
@@ -471,13 +288,6 @@ CREATE TABLE public.supply_invoice (
 	CONSTRAINT fk_inventory FOREIGN KEY (inventory_id) REFERENCES public.inventory(inventory_id),
 	CONSTRAINT supply_invoice_supply_details_id_fkey FOREIGN KEY (supply_details_id) REFERENCES public.supply_details(supply_details_id)
 );
-
-
--- public.service_inventory definition
-
--- Drop table
-
--- DROP TABLE public.service_inventory;
 
 CREATE TABLE public.service_inventory (
 	service_inventory_id serial4 NOT NULL,
@@ -494,173 +304,52 @@ CREATE TABLE public.service_inventory (
 );
 
 
--- meta.dataloadhistory definition
-
--- Drop table
-
--- DROP TABLE meta.dataloadhistory;
-
-CREATE TABLE meta.dataloadhistory (
-	data_load_history_id serial4 NOT NULL,
-	load_datetime timestamp NULL,
-	load_time time NULL,
-	load_rows int4 NULL,
-	affected_table_count int4 NULL,
-	source_table_count int4 NULL,
-	CONSTRAINT dataloadhistory_pkey PRIMARY KEY (data_load_history_id)
-);
+ALTER TABLE public.inventory
+ADD CONSTRAINT detail_service_unique UNIQUE (detail_id, service_station_id);
 
 
--- meta.dwattributecolumn definition
-
--- Drop table
-
--- DROP TABLE meta.dwattributecolumn;
-
-CREATE TABLE meta.dwattributecolumn (
-	dw_attribute_column_id serial4 NOT NULL,
-	dw_attribute_column_name varchar NULL,
-	dw_attribute_column_datatype varchar NULL,
-	CONSTRAINT dwattributecolumn_pkey PRIMARY KEY (dw_attribute_column_id)
-);
-
-
--- meta.sourcedb definition
-
--- Drop table
-
--- DROP TABLE meta.sourcedb;
-
-CREATE TABLE meta.sourcedb (
-	source_db_id serial4 NOT NULL,
-	source_db_name varchar NULL,
-	CONSTRAINT sourcedb_pkey PRIMARY KEY (source_db_id)
-);
+DO $$
+DECLARE
+    rec record;
+BEGIN
+    FOR rec IN SELECT table_name, column_name, pg_get_serial_sequence(table_name, column_name) as seq_name
+               FROM information_schema.columns
+               WHERE column_default LIKE 'nextval(%' AND table_schema = 'public'
+    LOOP
+        IF rec.seq_name IS NOT NULL THEN
+            EXECUTE format('SELECT setval(%L, COALESCE(MAX(%I), 0) + 1, false) FROM %I', 
+                           rec.seq_name, rec.column_name, rec.table_name);
+        END IF;
+    END LOOP;
+END $$;
 
 
--- meta.dwtable definition
-
--- Drop table
-
--- DROP TABLE meta.dwtable;
-
-CREATE TABLE meta.dwtable (
-	dw_table_id serial4 NOT NULL,
-	data_load_history_id int4 NULL,
-	dw_table_name varchar NULL,
-	CONSTRAINT dwtable_pkey PRIMARY KEY (dw_table_id),
-	CONSTRAINT dwtable_data_load_history_id_fkey FOREIGN KEY (data_load_history_id) REFERENCES meta.dataloadhistory(data_load_history_id)
-);
+-- Keep updated_at current on every UPDATE; the incremental ETL relies on it.
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE NOTICE 'Trigger called for table % on column % at time %', TG_TABLE_NAME, 'updated_at', CURRENT_TIMESTAMP;
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
 
--- meta.fact definition
-
--- Drop table
-
--- DROP TABLE meta.fact;
-
-CREATE TABLE meta.fact (
-	fact_id serial4 NOT NULL,
-	key_name varchar NULL,
-	dw_table_id int4 NULL,
-	fact_type varchar NULL,
-	CONSTRAINT fact_pkey PRIMARY KEY (fact_id),
-	CONSTRAINT fact_dw_table_id_fkey FOREIGN KEY (dw_table_id) REFERENCES meta.dwtable(dw_table_id)
-);
 
 
--- meta.factmetric definition
-
--- Drop table
-
--- DROP TABLE meta.factmetric;
-
-CREATE TABLE meta.factmetric (
-	fact_metric_id serial4 NOT NULL,
-	fact_id int4 NULL,
-	dw_attribute_column_id int4 NULL,
-	fact_metric_description varchar NULL,
-	CONSTRAINT factmetric_pkey PRIMARY KEY (fact_metric_id),
-	CONSTRAINT factmetric_dw_attribute_column_id_fkey FOREIGN KEY (dw_attribute_column_id) REFERENCES meta.dwattributecolumn(dw_attribute_column_id),
-	CONSTRAINT factmetric_fact_id_fkey FOREIGN KEY (fact_id) REFERENCES meta.fact(fact_id)
-);
-
-
--- meta.sourcetable definition
-
--- Drop table
-
--- DROP TABLE meta.sourcetable;
-
-CREATE TABLE meta.sourcetable (
-	source_table_id serial4 NOT NULL,
-	source_db_id int4 NULL,
-	key_name varchar NULL,
-	source_table_name varchar NULL,
-	CONSTRAINT sourcetable_pkey PRIMARY KEY (source_table_id),
-	CONSTRAINT sourcetable_source_db_id_fkey FOREIGN KEY (source_db_id) REFERENCES meta.sourcedb(source_db_id)
-);
-
-
--- meta.dimension definition
-
--- Drop table
-
--- DROP TABLE meta.dimension;
-
-CREATE TABLE meta.dimension (
-	dimension_id serial4 NOT NULL,
-	dw_table_id int4 NULL,
-	key_name varchar NULL,
-	dimension_type varchar NULL,
-	dimension_name varchar NULL,
-	CONSTRAINT dimension_pkey PRIMARY KEY (dimension_id),
-	CONSTRAINT dimension_dw_table_id_fkey FOREIGN KEY (dw_table_id) REFERENCES meta.dwtable(dw_table_id)
-);
-
-
--- meta.dimensionattributes definition
-
--- Drop table
-
--- DROP TABLE meta.dimensionattributes;
-
-CREATE TABLE meta.dimensionattributes (
-	dimension_id int4 NULL,
-	dw_attribute_column_id int4 NULL,
-	CONSTRAINT dimensionattributes_dimension_id_fkey FOREIGN KEY (dimension_id) REFERENCES meta.dimension(dimension_id),
-	CONSTRAINT dimensionattributes_dw_attribute_column_id_fkey FOREIGN KEY (dw_attribute_column_id) REFERENCES meta.dwattributecolumn(dw_attribute_column_id)
-);
-
-
--- meta.sourcecolumn definition
-
--- Drop table
-
--- DROP TABLE meta.sourcecolumn;
-
-CREATE TABLE meta.sourcecolumn (
-	source_column_id serial4 NOT NULL,
-	source_table_id int4 NULL,
-	source_column_name varchar NULL,
-	data_type varchar NULL,
-	CONSTRAINT sourcecolumn_pkey PRIMARY KEY (source_column_id),
-	CONSTRAINT sourcecolumn_source_table_id_fkey FOREIGN KEY (source_table_id) REFERENCES meta.sourcetable(source_table_id)
-);
-
-
--- meta.transformation definition
-
--- Drop table
-
--- DROP TABLE meta.transformation;
-
-CREATE TABLE meta.transformation (
-	transformation_id serial4 NOT NULL,
-	dw_attribute_column_id int4 NULL,
-	transformation_rule varchar NULL,
-	source_column_id int4 NULL,
-	CONSTRAINT transformation_pkey PRIMARY KEY (transformation_id),
-	CONSTRAINT transformation_dw_attribute_column_id_fkey FOREIGN KEY (dw_attribute_column_id) REFERENCES meta.dwattributecolumn(dw_attribute_column_id),
-	CONSTRAINT transformation_source_column_id_fkey FOREIGN KEY (source_column_id) REFERENCES meta.sourcecolumn(source_column_id)
-);
+DO $$
+DECLARE
+    row record;
+BEGIN
+    FOR row IN SELECT table_name FROM information_schema.tables
+               WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+    LOOP
+        -- Перевірка чи існує колонка `updated_at`
+        IF EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_schema = 'public' AND table_name = row.table_name AND column_name = 'updated_at') THEN
+            EXECUTE format('CREATE TRIGGER update_%1$I_updated_at BEFORE UPDATE ON public.%1$I 
+                            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()', row.table_name);
+        END IF;
+    END LOOP;
+END;
+$$;

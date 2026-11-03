@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE initialize_metadata()
+CREATE OR REPLACE PROCEDURE meta.initialize_metadata()
 LANGUAGE plpgsql
 AS $$
 BEGIN
@@ -167,7 +167,3 @@ BEGIN
     RAISE NOTICE 'Metadata initialization completed successfully.';
 END;
 $$;
-
--- Call the procedure
-CALL initialize_metadata();
-

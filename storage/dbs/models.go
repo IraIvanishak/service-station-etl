@@ -315,7 +315,7 @@ type StageService struct {
 	Name              sql.NullString
 	Description       sql.NullString
 	Price             sql.NullString
-	EstimatedDuration sql.NullInt64
+	EstimatedDuration sql.NullString
 }
 
 type StageServiceInventory struct {

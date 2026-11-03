@@ -2,5 +2,16 @@ version: "1"
 packages:
   - path: "./storage/dbs/"
     engine: "postgresql"
-    schema: "/storage/schema/"
+    schema:
+      - "./db/init/01_oltp_schema.sql"
+      - "./db/init/03_warehouse_schema.sql"
+      - "./db/init/04_stage_schema.sql"
+      - "./db/init/05_meta_schema.sql"
     queries: "./storage/query/"
+overrides:
+  # lib/pq returns intervals as text ("1 day 02:00:00").
+  - db_type: "pg_catalog.interval"
+    go_type: "string"
+  - db_type: "pg_catalog.interval"
+    go_type: "database/sql.NullString"
+    nullable: true

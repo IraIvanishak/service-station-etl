@@ -1,10 +1,10 @@
+CREATE SCHEMA IF NOT EXISTS storage;
+
 -- public.date_dim definition
 
 -- Drop table
 
 -- DROP TABLE date_dim;
-
-CREATE SCHEMA storage AUTHORIZATION postgres;
 
 CREATE TABLE storage.date_dim (
 	date_id serial4 NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE storage.service_dim (
 	"name" varchar(255) NULL,
 	description text NULL,
 	price numeric(10, 2) NULL,
-	estimated_duration varchar(255) NULL,
+	estimated_duration interval NULL,
 	CONSTRAINT service_dim_bk_service_id_key UNIQUE (bk_service_id),
 	CONSTRAINT service_dim_pkey PRIMARY KEY (service_dim_id)
 );
@@ -143,9 +143,9 @@ CREATE TABLE storage.service_inventory_fact (
 	parts_cost numeric(10, 2) NULL,
 	total_cost numeric(10, 2) NULL,
 	parts_cost_percentage numeric(10, 2) NULL,
-	actual_service_duration varchar(255) NULL,
-	estimated_service_duration varchar(255) NULL,
-	service_duration_deviation varchar(255) NULL,
+	actual_service_duration interval NULL,
+	estimated_service_duration interval NULL,
+	service_duration_deviation interval NULL,
 	bk_service_inventory_id int4 NOT NULL,
 	amount numeric(10, 2) NULL,
 	CONSTRAINT service_inventory_fact_bk_service_inventory_id_key UNIQUE (bk_service_inventory_id),
@@ -153,161 +153,3 @@ CREATE TABLE storage.service_inventory_fact (
 	CONSTRAINT service_inventory_fact_inventory_dim_id_fkey FOREIGN KEY (inventory_dim_id) REFERENCES storage.inventory_dim(inventory_dim_id),
 	CONSTRAINT service_inventory_fact_service_repair_dim_id_fkey FOREIGN KEY (service_repair_dim_id) REFERENCES storage.service_repair_dim(service_repair_dim_id)
 );
-
-
-
-CREATE SCHEMA stage AUTHORIZATION postgres;
-
-
--- stage.detail definition
-
--- Drop table
-
--- DROP TABLE stage.detail;
-
-CREATE TABLE stage.detail (
-	detail_id serial4 NOT NULL,
-	description text NULL,
-	manufacturer_id int4 NULL,
-	detail_type_id int4 NULL,
-	article varchar(255) NULL,
-	price numeric NULL,
-	dimensions varchar(255) NULL,
-	weight numeric NULL,
-	CONSTRAINT detail_pkey PRIMARY KEY (detail_id)
-);
-
-
--- stage.inventory definition
-
--- Drop table
-
--- DROP TABLE stage.inventory;
-
-CREATE TABLE stage.inventory (
-	inventory_id serial4 NOT NULL,
-	detail_id int4 NULL,
-	quantity int4 NULL,
-	service_station_id int4 NULL,
-	CONSTRAINT inventory_pkey PRIMARY KEY (inventory_id)
-);
-
-
--- stage.repair definition
-
--- Drop table
-
--- DROP TABLE stage.repair;
-
-CREATE TABLE stage.repair (
-	repair_id serial4 NOT NULL,
-	employee_id int4 NULL,
-	start_date date NULL,
-	repair_status_id int4 NULL,
-	notes text NULL,
-	repair_number varchar(255) NULL,
-	payment_status_id int4 NULL,
-	car_client_id int4 NULL,
-	total_sum numeric NULL,
-	CONSTRAINT repair_pkey PRIMARY KEY (repair_id)
-);
-
-
--- stage.service definition
-
--- Drop table
-
--- DROP TABLE stage.service;
-
-CREATE TABLE stage.service (
-	service_id serial4 NOT NULL,
-	"name" varchar(255) NULL,
-	description text NULL,
-	price numeric NULL,
-	estimated_duration interval NULL,
-	CONSTRAINT service_pkey PRIMARY KEY (service_id)
-);
-
-
--- stage.service_inventory definition
-
--- Drop table
-
--- DROP TABLE stage.service_inventory;
-
-CREATE TABLE stage.service_inventory (
-	service_inventory_id serial4 NOT NULL,
-	service_repair_id int4 NULL,
-	inventory_id int4 NULL,
-	amount int4 NULL,
-	CONSTRAINT service_inventory_pkey PRIMARY KEY (service_inventory_id)
-);
-
-
--- stage.service_repair definition
-
--- Drop table
-
--- DROP TABLE stage.service_repair;
-
-CREATE TABLE stage.service_repair (
-	service_repairs_id serial4 NOT NULL,
-	service_id int4 NULL,
-	repair_id int4 NULL,
-	quantity int4 NULL,
-	completion_date date NULL,
-	service_total_price numeric NULL,
-	CONSTRAINT service_repair_pkey PRIMARY KEY (service_repairs_id)
-);
-
-
--- stage.supplier definition
-
--- Drop table
-
--- DROP TABLE stage.supplier;
-
-CREATE TABLE stage.supplier (
-	supplier_id serial4 NOT NULL,
-	"name" varchar(255) NULL,
-	city_id int4 NULL,
-	phone_number varchar(255) NULL,
-	address varchar(255) NULL,
-	CONSTRAINT supplier_pkey PRIMARY KEY (supplier_id)
-);
-
-
--- stage.supply definition
-
--- Drop table
-
--- DROP TABLE stage.supply;
-
-CREATE TABLE stage.supply (
-	supply_id serial4 NOT NULL,
-	supply_number varchar(255) NULL,
-	supply_date date NULL,
-	total_sum numeric NULL,
-	status_id int4 NULL,
-	supplier_id int4 NULL,
-	employee_id int4 NULL,
-	CONSTRAINT supply_pkey PRIMARY KEY (supply_id)
-);
-
-
--- stage.supply_details definition
-
--- Drop table
-
--- DROP TABLE stage.supply_details;
-
-CREATE TABLE stage.supply_details (
-	supply_details_id serial4 NOT NULL,
-	detail_id int4 NULL,
-	quantity int4 NULL,
-	price_per_unit numeric NULL,
-	supply_id int4 NULL,
-	CONSTRAINT supply_details_pkey PRIMARY KEY (supply_details_id)
-);
-
-

@@ -10,15 +10,6 @@ import (
 	"database/sql"
 )
 
-const clearMeta = `-- name: ClearMeta :exec
-CALL meta.clearmeat()
-`
-
-func (q *Queries) ClearMeta(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, clearMeta)
-	return err
-}
-
 const clearStorage = `-- name: ClearStorage :exec
 CALL storage.clearstorage()
 `
@@ -100,7 +91,7 @@ func (q *Queries) OlapToStageIncremental(ctx context.Context) error {
 }
 
 const oltpToStage = `-- name: OltpToStage :exec
-CALL public.transfer_data_to_stage()
+CALL stage.transfer_data_to_stage()
 `
 
 func (q *Queries) OltpToStage(ctx context.Context) error {
@@ -109,7 +100,7 @@ func (q *Queries) OltpToStage(ctx context.Context) error {
 }
 
 const stageToOlap = `-- name: StageToOlap :exec
-CALL stage.fill_storage_from_stage()
+CALL storage.fill_storage_from_stage()
 `
 
 func (q *Queries) StageToOlap(ctx context.Context) error {
@@ -118,7 +109,7 @@ func (q *Queries) StageToOlap(ctx context.Context) error {
 }
 
 const stageToOlapIncremental = `-- name: StageToOlapIncremental :exec
-CALL stage.fill_olap_from_staging_incremental()
+CALL storage.fill_olap_from_staging_incremental()
 `
 
 func (q *Queries) StageToOlapIncremental(ctx context.Context) error {
