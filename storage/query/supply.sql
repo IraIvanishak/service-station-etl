@@ -32,7 +32,8 @@ left join
 left join 
 	service_station ss2 on ss2.station_id = i.service_station_id 
 left join 
-	detail d on d.detail_id = sd.detail_id;
+	detail d on d.detail_id = sd.detail_id
+ORDER BY s.supply_id, sd.supply_details_id;
 
 
 -- name: NewSupply :one

@@ -39,40 +39,40 @@ type DetailsDTO struct {
 	StationID int32 `json:"StationID"`
 }
 
+// GroupSupplyData groups the ListSupply rows (one per supply line) into
+// supplies, keeping the query order (by supply id).
 func GroupSupplyData(rows []dbs.ListSupplyRow) ([]SupplyDTO, error) {
-	supplyMap := make(map[int32]*SupplyDTO)
+	var supplies []SupplyDTO
+	index := make(map[int32]int)
 
 	for _, row := range rows {
-		if _, exists := supplyMap[row.SupplyID]; !exists {
-			supplyMap[row.SupplyID] = &SupplyDTO{
+		i, ok := index[row.SupplyID]
+		if !ok {
+			i = len(supplies)
+			index[row.SupplyID] = i
+			supplies = append(supplies, SupplyDTO{
 				SupplyID:     row.SupplyID,
 				SupplyNumber: row.SupplyNumber,
 				Details:      []DetailDTO{},
 				SupplierName: row.SupplierName.String,
 				Employee:     EmployeeDTO{FirstName: row.EmployeeFirstName.String, LastName: row.EmployeeLastName.String},
 				SupplyStatus: row.SupplyStatus.String,
-			}
+			})
 		}
-
-		price := ParseFloat(row.PricePerUnit.String)
-		detail := DetailDTO{
+		if !row.DetailID.Valid { // supply without lines
+			continue
+		}
+		supplies[i].Details = append(supplies[i].Details, DetailDTO{
 			DetailID:       row.DetailID.Int32,
 			Quantity:       row.Quantity.Int32,
-			PricePerUnit:   price,
+			PricePerUnit:   ParseFloat(row.PricePerUnit.String),
 			Article:        row.Article.Int32,
 			SupplyDate:     row.SupplyDate,
 			Description:    row.Description.String,
 			InvoiceNumber:  row.InvoiceNumber.String,
 			ServiceStation: row.ServiceStation.String,
-		}
-		supplyMap[row.SupplyID].Details = append(supplyMap[row.SupplyID].Details, detail)
+		})
 	}
-
-	supplies := make([]SupplyDTO, 0, len(supplyMap))
-	for _, supply := range supplyMap {
-		supplies = append(supplies, *supply)
-	}
-
 	return supplies, nil
 }
 
