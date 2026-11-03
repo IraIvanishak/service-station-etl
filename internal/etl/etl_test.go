@@ -148,6 +148,22 @@ func TestIncrementalLoadAppliesChanges(t *testing.T) {
 	}
 }
 
+// A repair is created before any service is added to it (POST /repairs).
+func TestIncrementalLoadPicksUpRepairWithoutServices(t *testing.T) {
+	db := testDB(t)
+	loads := etl.NewRunner(db)
+	run(t, loads.Full)
+
+	repairID := scalar[int](t, db, `
+		INSERT INTO public.repair_order (employee_id, start_date, repair_status_id, notes, repair_number, payment_status_id, total_sum)
+		VALUES (1, now(), 1, 'New repair', 'RO-TEST', 1, 0) RETURNING repair_id`)
+	run(t, loads.Incremental)
+
+	if n := scalar[int](t, db, "SELECT count(*) FROM storage.repair_dim WHERE bk_repair_id = $1", repairID); n != 1 {
+		t.Errorf("repair %d is not in repair_dim after the incremental load", repairID)
+	}
+}
+
 // After an incremental load the warehouse must look exactly like a full
 // rebuild from the same OLTP data.
 func TestIncrementalLoadMatchesFullLoad(t *testing.T) {

@@ -27,7 +27,8 @@ begin
     INSERT INTO stage.repair (repair_id, employee_id, start_date, repair_status_id, notes, repair_number, payment_status_id, car_client_id, total_sum)
     SELECT DISTINCT r.repair_id, r.employee_id, r.start_date, r.repair_status_id, r.notes, r.repair_number, r.payment_status_id, r.car_client_id, r.total_sum
     FROM public.repair_order  r
-    JOIN public.service_repairs sr ON r.repair_id = sr.repair_id
+    -- LEFT JOIN: a repair without services yet is still a changed repair.
+    LEFT JOIN public.service_repairs sr ON r.repair_id = sr.repair_id
     WHERE r.updated_at > last_load_time OR r.created_at > last_load_time
        OR sr.updated_at > last_load_time OR sr.created_at > last_load_time;
 
