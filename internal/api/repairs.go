@@ -37,15 +37,22 @@ func (s *Server) createRepair(c *fiber.Ctx) error {
 		if err != nil {
 			return err
 		}
-		return q.StoreOrder(ctx, dbs.StoreOrderParams{
+		opened := time.Now()
+		repairID, err := q.StoreOrder(ctx, dbs.StoreOrderParams{
 			EmployeeID:      sql.NullInt32{Int32: repair.AssignedEmployeeID, Valid: true},
-			StartDate:       sql.NullTime{Time: time.Now(), Valid: true},
+			StartDate:       sql.NullTime{Time: opened, Valid: true},
 			RepairStatusID:  sql.NullInt32{Int32: 1, Valid: true},
 			Notes:           sql.NullString{String: repair.Notes, Valid: true},
-			RepairNumber:    sql.NullString{String: dto.CreateRepairNumber(), Valid: true},
 			PaymentStatusID: sql.NullInt32{Int32: 1, Valid: true},
 			CarClientID:     sql.NullInt32{Int32: carClientID, Valid: true},
 			TotalSum:        sql.NullString{String: "0", Valid: true},
+		})
+		if err != nil {
+			return err
+		}
+		return q.SetRepairNumber(ctx, dbs.SetRepairNumberParams{
+			RepairID:     repairID,
+			RepairNumber: sql.NullString{String: dto.RepairNumber(repairID, opened), Valid: true},
 		})
 	})
 	if err != nil {

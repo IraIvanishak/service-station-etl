@@ -296,6 +296,20 @@ func (q *Queries) NewSupplyInvoice(ctx context.Context, arg NewSupplyInvoicePara
 	return supply_invoice_id, err
 }
 
+const setSupplyNumber = `-- name: SetSupplyNumber :exec
+UPDATE supply SET supply_number = $1 WHERE supply_id = $2
+`
+
+type SetSupplyNumberParams struct {
+	SupplyNumber string
+	SupplyID     int32
+}
+
+func (q *Queries) SetSupplyNumber(ctx context.Context, arg SetSupplyNumberParams) error {
+	_, err := q.db.ExecContext(ctx, setSupplyNumber, arg.SupplyNumber, arg.SupplyID)
+	return err
+}
+
 const setSupplyStatus = `-- name: SetSupplyStatus :one
 UPDATE supply
 SET status_id = $1

@@ -101,13 +101,14 @@ type EmployeeDTO struct {
 	LastName  string `json:"last_name"`
 }
 
-// func to generate smt like SN-000900 baced on id
-func CreateSupplyNumber(id int) string {
-	return fmt.Sprintf("SN-000%d", id)
+// SupplyNumber formats a supply number from its id, e.g. SN-001001.
+func SupplyNumber(id int32) string {
+	return fmt.Sprintf("SN-%06d", id)
 }
 
-// func to gebereate smt like INV-636217
-func CreateInvoiceNumber() string {
-	t := time.Now()
-	return fmt.Sprintf("INV-%d", t.Unix())
+// InvoiceNumber formats an invoice number from the supply and supply line
+// ids, e.g. INV-1001-2121. It used to be the current Unix second, so every
+// line of one supply got the same number.
+func InvoiceNumber(supplyID, lineID int32) string {
+	return fmt.Sprintf("INV-%d-%d", supplyID, lineID)
 }

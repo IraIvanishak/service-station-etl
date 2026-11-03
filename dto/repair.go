@@ -140,10 +140,10 @@ func ConvertToDTO(rows []dbs.ListOrdersRow) []RepairOrderDTO {
 	return dtos
 }
 
-// func that generates smt in format like RO-20230410-008
-func CreateRepairNumber() string {
-	t := time.Now()
-	return fmt.Sprintf("RO-%d%02d%02d-%03d", t.Year(), t.Month(), t.Day(), 8)
+// RepairNumber formats an order number from its opening date and id,
+// e.g. RO-20230410-1201. (The sequence suffix used to be a constant 008.)
+func RepairNumber(id int32, opened time.Time) string {
+	return fmt.Sprintf("RO-%s-%03d", opened.Format("20060102"), id)
 }
 
 // BuildRepairs groups the flat ListOrders rows into repair orders with their

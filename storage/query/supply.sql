@@ -54,6 +54,9 @@ VALUES (
 )
 RETURNING supply_id;
 
+-- name: SetSupplyNumber :exec
+UPDATE supply SET supply_number = @supply_number WHERE supply_id = @supply_id;
+
 -- name: GetSupplyDetailPrice :one
 SELECT 
     price

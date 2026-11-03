@@ -51,19 +51,22 @@ func (s *Server) createSupply(c *fiber.Ctx) error {
 			total += float64(d.Quantity) * prices[i]
 		}
 
-		existing, err := q.ListSupply(ctx)
+		supplyID, err := q.NewSupply(ctx, dbs.NewSupplyParams{
+			TotalSum:   sql.NullString{String: strconv.FormatFloat(total, 'f', 6, 64), Valid: true},
+			StatusID:   sql.NullInt32{Int32: status, Valid: true},
+			SupplyDate: req.SupplyDate,
+			SupplierID: sql.NullInt32{Int32: req.SupplierID, Valid: true},
+			EmployeeID: sql.NullInt32{Int32: req.EmployeeID, Valid: true},
+			// Numbered from the id below; the column is NOT NULL.
+			SupplyNumber: "",
+		})
 		if err != nil {
 			return err
 		}
-		supplyID, err := q.NewSupply(ctx, dbs.NewSupplyParams{
-			TotalSum:     sql.NullString{String: strconv.FormatFloat(total, 'f', 6, 64), Valid: true},
-			StatusID:     sql.NullInt32{Int32: status, Valid: true},
-			SupplyDate:   req.SupplyDate,
-			SupplierID:   sql.NullInt32{Int32: req.SupplierID, Valid: true},
-			EmployeeID:   sql.NullInt32{Int32: req.EmployeeID, Valid: true},
-			SupplyNumber: dto.CreateSupplyNumber(len(existing) + 1),
-		})
-		if err != nil {
+		if err := q.SetSupplyNumber(ctx, dbs.SetSupplyNumberParams{
+			SupplyID:     supplyID,
+			SupplyNumber: dto.SupplyNumber(supplyID),
+		}); err != nil {
 			return err
 		}
 
@@ -88,7 +91,7 @@ func (s *Server) createSupply(c *fiber.Ctx) error {
 				if _, err := q.NewSupplyInvoice(ctx, dbs.NewSupplyInvoiceParams{
 					InventoryID:     inventoryID,
 					SupplyDetailsID: sql.NullInt32{Int32: lineID, Valid: true},
-					InvoiceNumber:   sql.NullString{String: dto.CreateInvoiceNumber(), Valid: true},
+					InvoiceNumber:   sql.NullString{String: dto.InvoiceNumber(supplyID, lineID), Valid: true},
 				}); err != nil {
 					return err
 				}
@@ -122,7 +125,7 @@ func (s *Server) receiveSupply(c *fiber.Ctx) error {
 			if _, err := q.NewSupplyInvoice(ctx, dbs.NewSupplyInvoiceParams{
 				InventoryID:     inventoryID,
 				SupplyDetailsID: sql.NullInt32{Int32: line.SupplyDetailsID, Valid: true},
-				InvoiceNumber:   sql.NullString{String: dto.CreateInvoiceNumber(), Valid: true},
+				InvoiceNumber:   sql.NullString{String: dto.InvoiceNumber(id, line.SupplyDetailsID), Valid: true},
 			}); err != nil {
 				return err
 			}

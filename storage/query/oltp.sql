@@ -56,10 +56,13 @@ LEFT JOIN public.brand br ON car.brand_id = br.brand_id
 ORDER BY
     car.car_id;
 
--- name: StoreOrder :exec
-INSERT INTO repair_order (employee_id, start_date, repair_status_id, notes, repair_number, payment_status_id, car_client_id, total_sum) VALUES (
-    @employee_id, @start_date, @repair_status_id, @notes, @repair_number, @payment_status_id, @car_client_id, @total_sum
-);
+-- name: StoreOrder :one
+INSERT INTO repair_order (employee_id, start_date, repair_status_id, notes, payment_status_id, car_client_id, total_sum) VALUES (
+    @employee_id, @start_date, @repair_status_id, @notes, @payment_status_id, @car_client_id, @total_sum
+) RETURNING repair_id;
+
+-- name: SetRepairNumber :exec
+UPDATE repair_order SET repair_number = @repair_number WHERE repair_id = @repair_id;
 
 -- name: StoreCarClient :one
 INSERT INTO car_client (car_id, client_id, description, registration_number, vin, color) VALUES (

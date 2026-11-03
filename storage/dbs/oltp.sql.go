@@ -582,6 +582,20 @@ func (q *Queries) MetaData(ctx context.Context) ([]MetaDataloadhistory, error) {
 	return items, nil
 }
 
+const setRepairNumber = `-- name: SetRepairNumber :exec
+UPDATE repair_order SET repair_number = $1 WHERE repair_id = $2
+`
+
+type SetRepairNumberParams struct {
+	RepairNumber sql.NullString
+	RepairID     int32
+}
+
+func (q *Queries) SetRepairNumber(ctx context.Context, arg SetRepairNumberParams) error {
+	_, err := q.db.ExecContext(ctx, setRepairNumber, arg.RepairNumber, arg.RepairID)
+	return err
+}
+
 const storeCarClient = `-- name: StoreCarClient :one
 INSERT INTO car_client (car_id, client_id, description, registration_number, vin, color) VALUES (
     $1, $2, $3, $4, $5, $6
@@ -611,10 +625,10 @@ func (q *Queries) StoreCarClient(ctx context.Context, arg StoreCarClientParams) 
 	return car_client_id, err
 }
 
-const storeOrder = `-- name: StoreOrder :exec
-INSERT INTO repair_order (employee_id, start_date, repair_status_id, notes, repair_number, payment_status_id, car_client_id, total_sum) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
-)
+const storeOrder = `-- name: StoreOrder :one
+INSERT INTO repair_order (employee_id, start_date, repair_status_id, notes, payment_status_id, car_client_id, total_sum) VALUES (
+    $1, $2, $3, $4, $5, $6, $7
+) RETURNING repair_id
 `
 
 type StoreOrderParams struct {
@@ -622,24 +636,24 @@ type StoreOrderParams struct {
 	StartDate       sql.NullTime
 	RepairStatusID  sql.NullInt32
 	Notes           sql.NullString
-	RepairNumber    sql.NullString
 	PaymentStatusID sql.NullInt32
 	CarClientID     sql.NullInt32
 	TotalSum        sql.NullString
 }
 
-func (q *Queries) StoreOrder(ctx context.Context, arg StoreOrderParams) error {
-	_, err := q.db.ExecContext(ctx, storeOrder,
+func (q *Queries) StoreOrder(ctx context.Context, arg StoreOrderParams) (int32, error) {
+	row := q.db.QueryRowContext(ctx, storeOrder,
 		arg.EmployeeID,
 		arg.StartDate,
 		arg.RepairStatusID,
 		arg.Notes,
-		arg.RepairNumber,
 		arg.PaymentStatusID,
 		arg.CarClientID,
 		arg.TotalSum,
 	)
-	return err
+	var repair_id int32
+	err := row.Scan(&repair_id)
+	return repair_id, err
 }
 
 const storeServiceInventory = `-- name: StoreServiceInventory :exec
