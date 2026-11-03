@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/IraIvanishak/practice-squirrel/dto"
-	"github.com/IraIvanishak/practice-squirrel/storage/dbs"
+	"github.com/IraIvanishak/service-station-etl/dto"
+	"github.com/IraIvanishak/service-station-etl/storage/dbs"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	_ "github.com/lib/pq"

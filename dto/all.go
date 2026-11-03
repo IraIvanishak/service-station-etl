@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/IraIvanishak/practice-squirrel/storage/dbs"
+	"github.com/IraIvanishak/service-station-etl/storage/dbs"
 )
 
 // SupplyDetailsDTO - структура для user-friendly формату.

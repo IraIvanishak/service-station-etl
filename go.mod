@@ -1,4 +1,4 @@
-module github.com/IraIvanishak/practice-squirrel
+module github.com/IraIvanishak/service-station-etl
 
 go 1.22
 
