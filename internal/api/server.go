@@ -70,7 +70,7 @@ func (s *Server) routes(app *fiber.App) {
 	app.Get("/service-invenroty-cube", s.serviceInventoryCube)
 	app.Get("/supply-cube", s.supplyCube)
 	app.Post("/init", s.fullLoad)
-	app.Get("/stage", s.detectChanges)
+	app.Post("/stage", s.detectChanges) // rewrites the stage tables, so not a GET
 	app.Post("/incremental", s.incrementalLoad)
 	app.Post("/clearmeta", s.clearWarehouse)
 }

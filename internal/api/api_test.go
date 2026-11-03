@@ -284,6 +284,24 @@ func TestLinesArePricedFromTheCatalog(t *testing.T) {
 	}
 }
 
+// Detecting changes rewrites the stage tables, so it must not be a GET.
+func TestDetectChangesIsPost(t *testing.T) {
+	app, _ := newServer(t)
+	if code, _ := call(t, app, "GET", "/stage", nil); code < 400 {
+		t.Errorf("GET /stage: %d, want an error", code)
+	}
+	var staged []struct {
+		TableName string
+		RowCount  int64
+	}
+	if err := json.Unmarshal([]byte(mustCall(t, app, "POST", "/stage", nil)), &staged); err != nil {
+		t.Fatal(err)
+	}
+	if len(staged) != 9 {
+		t.Errorf("POST /stage reported %d tables, want 9", len(staged))
+	}
+}
+
 // --- helpers ---------------------------------------------------------------
 
 func newServer(t *testing.T) (*fiber.App, *sql.DB) {

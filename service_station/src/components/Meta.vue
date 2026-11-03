@@ -234,7 +234,7 @@ export default {
     },
     async fetchStage() {
       try {
-        const response = await fetch(`${API_URL}/stage`);
+        const response = await fetch(`${API_URL}/stage`, { method: 'POST' });
 
         this.stage = await response.json();
       } catch (error) {
