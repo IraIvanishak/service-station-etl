@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http/httptest"
 	"testing"
 
@@ -175,6 +176,74 @@ func TestDeleteStatusCodes(t *testing.T) {
 		if code, body := call(t, app, "DELETE", path, nil); code != want {
 			t.Errorf("DELETE %s: %d %s, want %d", path, code, body, want)
 		}
+	}
+}
+
+// GET /repairs must report each service line once, however many parts it
+// used, and the order totals must match the database.
+func TestListRepairsMatchesDatabase(t *testing.T) {
+	app, db := newServer(t)
+	var repairs []struct {
+		RepairID int32   `json:"repairId"`
+		TotalSum float64 `json:"totalSum"`
+		Services []struct {
+			ServiceName string  `json:"serviceName"`
+			Quantity    int32   `json:"quantity"`
+			TotalPrice  float64 `json:"totalPrice"`
+		} `json:"services"`
+	}
+	if err := json.Unmarshal([]byte(mustCall(t, app, "GET", "/repairs", nil)), &repairs); err != nil {
+		t.Fatal(err)
+	}
+	if want := testdb.Scalar[int](t, db, "SELECT count(*) FROM repair_order"); len(repairs) != want {
+		t.Fatalf("GET /repairs returned %d repairs, want %d", len(repairs), want)
+	}
+
+	rows, err := db.Query(`
+		SELECT ro.repair_id,
+		       coalesce((SELECT sum(quantity) FROM service_repairs sr WHERE sr.repair_id = ro.repair_id), 0),
+		       coalesce((SELECT sum(service_total_price) FROM service_repairs sr WHERE sr.repair_id = ro.repair_id), 0)
+		     + coalesce((SELECT sum(si.amount * d.price)
+		                 FROM service_repairs sr
+		                 JOIN service_inventory si ON si.service_repair_id = sr.service_repairs_id
+		                 JOIN inventory i ON i.inventory_id = si.inventory_id
+		                 JOIN detail d ON d.detail_id = i.detail_id
+		                 WHERE sr.repair_id = ro.repair_id), 0)
+		FROM repair_order ro`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	type want struct {
+		quantity int32
+		total    float64
+	}
+	expected := map[int32]want{}
+	for rows.Next() {
+		var id int32
+		var w want
+		if err := rows.Scan(&id, &w.quantity, &w.total); err != nil {
+			t.Fatal(err)
+		}
+		expected[id] = w
+	}
+
+	bad := 0
+	for _, r := range repairs {
+		var quantity int32
+		for _, s := range r.Services {
+			quantity += s.Quantity
+		}
+		w := expected[r.RepairID]
+		if quantity != w.quantity || math.Abs(r.TotalSum-w.total) > 0.005 {
+			if bad++; bad <= 3 {
+				t.Errorf("repair %d: %d service units, total %.2f; database: %d units, total %.2f",
+					r.RepairID, quantity, r.TotalSum, w.quantity, w.total)
+			}
+		}
+	}
+	if bad > 3 {
+		t.Errorf("... %d repairs differ in total", bad)
 	}
 }
 

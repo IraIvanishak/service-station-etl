@@ -64,35 +64,40 @@ type InventoryDTO struct {
 	Quantity        int32   `json:"quantity"`
 }
 
+// AggregateServices merges service lines with the same name (a service
+// added to a repair twice), keeping the order they first appear in.
 func AggregateServices(services []ServiceDTO) []ServiceDTO {
-	aggregated := make(map[string]*ServiceDTO)
+	merged := make([]ServiceDTO, 0, len(services))
+	index := make(map[string]int)
 	for _, service := range services {
-		if aggService, exists := aggregated[service.ServiceName]; exists {
-			aggService.Quantity += service.Quantity
-			aggService.TotalPrice += service.TotalPrice
-			aggService.InventoryUsed = append(aggService.InventoryUsed, service.InventoryUsed...)
-		} else {
-			// Make a deep copy of the service to store in the map
-			newService := service
-			aggregated[service.ServiceName] = &newService
+		if i, ok := index[service.ServiceName]; ok {
+			merged[i].Quantity += service.Quantity
+			merged[i].TotalPrice += service.TotalPrice
+			merged[i].InventoryUsed = append(merged[i].InventoryUsed, service.InventoryUsed...)
+			continue
 		}
+		index[service.ServiceName] = len(merged)
+		service.InventoryUsed = append([]InventoryDTO(nil), service.InventoryUsed...)
+		merged = append(merged, service)
 	}
-
-	var aggregatedServices []ServiceDTO
-	for _, service := range aggregated {
-		aggregatedServices = append(aggregatedServices, *service)
-	}
-
-	return aggregatedServices
+	return merged
 }
 
-// Convert data rows to DTO
+// ConvertToDTO groups the ListOrders rows (one per repair x service line x
+// part used) into repairs, in query order. Each service line is added once,
+// with all of its parts; previously every part row added the line again,
+// multiplying its quantity and price by the number of parts.
 func ConvertToDTO(rows []dbs.ListOrdersRow) []RepairOrderDTO {
-	repairOrders := make(map[int32]*RepairOrderDTO)
+	var repairs []RepairOrderDTO
+	repairIndex := make(map[int32]int)
+	lineIndex := make(map[int32]int) // service_repairs_id -> index in its repair's Services
 
 	for _, row := range rows {
-		if _, exists := repairOrders[row.RepairID]; !exists {
-			repairOrders[row.RepairID] = &RepairOrderDTO{
+		ri, ok := repairIndex[row.RepairID]
+		if !ok {
+			ri = len(repairs)
+			repairIndex[row.RepairID] = ri
+			repairs = append(repairs, RepairOrderDTO{
 				Address:          row.Address.String,
 				RepairID:         row.RepairID,
 				RepairNumber:     row.RepairNumber.String,
@@ -101,43 +106,45 @@ func ConvertToDTO(rows []dbs.ListOrdersRow) []RepairOrderDTO {
 				TotalSum:         ParseFloat(row.TotalSum.String),
 				RepairStatus:     row.RepairStatus.String,
 				PaymentStatus:    row.PaymentStatus.String,
-				AssignedEmployee: row.AssignedEmployee.(string),
+				AssignedEmployee: row.AssignedEmployee,
 				VehicleInfo: VehicleInfo{
 					RegistrationNumber: row.RegistrationNumber.String,
 					Description:        row.VehicleDescription.String,
 					Model:              row.VehicleModel.String,
-					Year:               int32(row.VehicleYear.Int32),
+					Year:               row.VehicleYear.Int32,
 				},
-				ClientName: row.ClientName.(string),
+				ClientName: row.ClientName,
 				Services:   []ServiceDTO{},
-			}
+			})
 		}
-
-		service := ServiceDTO{
-			ServiceName:    row.ServiceName.String,
-			Quantity:       int32(row.ServiceQuantity.Int32),
-			CompletionDate: row.CompletionDate.Time,
-			TotalPrice:     ParseFloat(row.ServiceTotalPrice.String),
-			InventoryUsed:  []InventoryDTO{},
+		if !row.ServiceRepairsID.Valid { // repair without services yet
+			continue
 		}
+		repair := &repairs[ri]
 
-		inventory := InventoryDTO{
+		li, ok := lineIndex[row.ServiceRepairsID.Int32]
+		if !ok {
+			li = len(repair.Services)
+			lineIndex[row.ServiceRepairsID.Int32] = li
+			repair.Services = append(repair.Services, ServiceDTO{
+				ServiceName:    row.ServiceName.String,
+				Quantity:       row.ServiceQuantity.Int32,
+				CompletionDate: row.CompletionDate.Time,
+				TotalPrice:     ParseFloat(row.ServiceTotalPrice.String),
+				InventoryUsed:  []InventoryDTO{},
+			})
+		}
+		if !row.ServiceInventoryID.Valid { // service without parts
+			continue
+		}
+		repair.Services[li].InventoryUsed = append(repair.Services[li].InventoryUsed, InventoryDTO{
 			Amount:          ParseFloat(row.InventoryAmount.String),
 			ItemDescription: row.InventoryItemDescription.String,
 			PricePerUnit:    ParseFloat(row.DetailItemPricePerUnit.String),
-			Quantity:        int32(row.InventoryItemQuantity.Int32),
-		}
-
-		service.InventoryUsed = append(service.InventoryUsed, inventory)
-		repairOrders[row.RepairID].Services = append(repairOrders[row.RepairID].Services, service)
+			Quantity:        row.InventoryItemQuantity.Int32,
+		})
 	}
-
-	// Convert map to slice
-	dtos := make([]RepairOrderDTO, 0, len(repairOrders))
-	for _, dto := range repairOrders {
-		dtos = append(dtos, *dto)
-	}
-	return dtos
+	return repairs
 }
 
 // RepairNumber formats an order number from its opening date and id,
