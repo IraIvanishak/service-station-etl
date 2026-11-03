@@ -112,3 +112,91 @@ begin
 
 END;
 $$;
+
+-- fill_staging_from_oltp_incremental() stages only rows that changed. The
+-- warehouse load joins stage tables to look up prices, dates and durations,
+-- and recomputes per-repair and per-supply-group aggregates, so it also needs
+-- the unchanged rows those changes depend on. Without them it silently
+-- dropped facts (a new parts usage of an unchanged detail), overwrote supply
+-- totals with the sum of the changed lines only, and kept stale estimated
+-- durations for the other services of a changed repair.
+--
+-- Called by storage.fill_olap_from_staging_incremental() before it loads, so
+-- the change counts reported from stage.* before that call stay "changed rows".
+-- Deletions are still not propagated; run a full load for those.
+CREATE OR REPLACE PROCEDURE stage.stage_referenced_rows()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- The service line behind every staged parts usage.
+    INSERT INTO stage.service_repair (service_repairs_id, service_id, repair_id, quantity, completion_date, service_total_price)
+    SELECT sr.service_repairs_id, sr.service_id, sr.repair_id, sr.quantity, sr.completion_date, sr.service_total_price
+    FROM public.service_repairs sr
+    WHERE sr.service_repairs_id IN (SELECT service_repair_id FROM stage.service_inventory)
+    ON CONFLICT (service_repairs_id) DO NOTHING;
+
+    -- Every service line of an affected repair: estimated duration is per repair.
+    INSERT INTO stage.service_repair (service_repairs_id, service_id, repair_id, quantity, completion_date, service_total_price)
+    SELECT sr.service_repairs_id, sr.service_id, sr.repair_id, sr.quantity, sr.completion_date, sr.service_total_price
+    FROM public.service_repairs sr
+    WHERE sr.repair_id IN (SELECT repair_id FROM stage.service_repair UNION SELECT repair_id FROM stage.repair)
+    ON CONFLICT (service_repairs_id) DO NOTHING;
+
+    -- Every parts usage of those service lines, so their facts are recomputed.
+    INSERT INTO stage.service_inventory (service_inventory_id, service_repair_id, inventory_id, amount)
+    SELECT si.service_inventory_id, si.service_repair_id, si.inventory_id, si.amount
+    FROM public.service_inventory si
+    WHERE si.service_repair_id IN (SELECT service_repairs_id FROM stage.service_repair)
+    ON CONFLICT (service_inventory_id) DO NOTHING;
+
+    -- The repair and service behind every staged service line.
+    INSERT INTO stage.repair (repair_id, employee_id, start_date, repair_status_id, notes, repair_number, payment_status_id, car_client_id, total_sum)
+    SELECT r.repair_id, r.employee_id, r.start_date, r.repair_status_id, r.notes, r.repair_number, r.payment_status_id, r.car_client_id, r.total_sum
+    FROM public.repair_order r
+    WHERE r.repair_id IN (SELECT repair_id FROM stage.service_repair)
+    ON CONFLICT (repair_id) DO NOTHING;
+
+    INSERT INTO stage.service (service_id, name, description, price, estimated_duration)
+    SELECT s.service_id, s.name, s.description, s.price, s.estimated_duration
+    FROM public.service s
+    WHERE s.service_id IN (SELECT service_id FROM stage.service_repair)
+    ON CONFLICT (service_id) DO NOTHING;
+
+    INSERT INTO stage.inventory (inventory_id, detail_id, quantity, service_station_id)
+    SELECT i.inventory_id, i.detail_id, i.quantity, i.service_station_id
+    FROM public.inventory i
+    WHERE i.inventory_id IN (SELECT inventory_id FROM stage.service_inventory)
+    ON CONFLICT (inventory_id) DO NOTHING;
+
+    -- Every line of an affected supply group (detail, supplier, supply date):
+    -- the fact row holds the group total and is replaced on upsert.
+    INSERT INTO stage.supply_details (supply_details_id, detail_id, quantity, price_per_unit, supply_id)
+    SELECT sd.supply_details_id, sd.detail_id, sd.quantity, sd.price_per_unit, sd.supply_id
+    FROM public.supply_details sd
+    JOIN public.supply s ON s.supply_id = sd.supply_id
+    WHERE (sd.detail_id, s.supplier_id, s.supply_date) IN (
+        SELECT sd2.detail_id, s2.supplier_id, s2.supply_date
+        FROM stage.supply_details sd2
+        JOIN public.supply s2 ON s2.supply_id = sd2.supply_id)
+    ON CONFLICT (supply_details_id) DO NOTHING;
+
+    INSERT INTO stage.supply (supply_id, supply_number, supply_date, total_sum, status_id, supplier_id, employee_id)
+    SELECT s.supply_id, s.supply_number, s.supply_date, s.total_sum, s.status_id, s.supplier_id, s.employee_id
+    FROM public.supply s
+    WHERE s.supply_id IN (SELECT supply_id FROM stage.supply_details)
+    ON CONFLICT (supply_id) DO NOTHING;
+
+    INSERT INTO stage.supplier (supplier_id, name, city_id, phone_number, address)
+    SELECT sp.supplier_id, sp.name, sp.city_id, sp.phone_number, sp.address
+    FROM public.supplier sp
+    WHERE sp.supplier_id IN (SELECT supplier_id FROM stage.supply)
+    ON CONFLICT (supplier_id) DO NOTHING;
+
+    -- Details used by staged stock rows and supply lines.
+    INSERT INTO stage.detail (detail_id, description, manufacturer_id, detail_type_id, article, price, dimensions, weight)
+    SELECT d.detail_id, d.description, d.manufacturer_id, d.detail_type_id, d.article, d.price, d.dimensions, d.weight
+    FROM public.detail d
+    WHERE d.detail_id IN (SELECT detail_id FROM stage.inventory UNION SELECT detail_id FROM stage.supply_details)
+    ON CONFLICT (detail_id) DO NOTHING;
+END;
+$$;

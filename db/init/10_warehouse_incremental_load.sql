@@ -8,6 +8,8 @@ DECLARE
     updated_count BIGINT := 0;
     db_table_count INT := 0;
 BEGIN
+    -- Changed rows are staged; add the unchanged rows they depend on.
+    CALL stage.stage_referenced_rows();
 
     -- Inserting data into supplier_dim
     -- !!!!!!!!!!!!!
