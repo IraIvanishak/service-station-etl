@@ -83,6 +83,29 @@ func TestFullLoadKeepsEverySupplyGroup(t *testing.T) {
 	}
 }
 
+// Quantities and costs in the supply fact must add up to the OLTP totals.
+// 277 seed supplies have more than one line, which is what used to break it.
+func TestFullLoadSupplyTotalsMatchOLTP(t *testing.T) {
+	db := testDB(t)
+	run(t, etl.NewRunner(db).Full)
+
+	var wantQty, gotQty int
+	var wantCost, gotCost string
+	if err := db.QueryRow(`
+		SELECT sum(sd.quantity), sum(sd.quantity * sd.price_per_unit)::text
+		FROM public.supply_details sd JOIN public.supply s USING (supply_id)`).Scan(&wantQty, &wantCost); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow(`
+		SELECT sum(detail_quantity), sum(detail_total_cost)::text
+		FROM storage.supply_details_fact`).Scan(&gotQty, &gotCost); err != nil {
+		t.Fatal(err)
+	}
+	if gotQty != wantQty || gotCost != wantCost {
+		t.Errorf("warehouse totals: %d units / %s, OLTP: %d units / %s", gotQty, gotCost, wantQty, wantCost)
+	}
+}
+
 // --- helpers ---------------------------------------------------------------
 
 // testDB returns a connection to a throwaway copy of the seeded database.

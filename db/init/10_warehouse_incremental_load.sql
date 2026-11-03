@@ -232,8 +232,11 @@ BEGIN
     JOIN stage.detail d ON sd.detail_id = d.detail_id
     JOIN storage.inventory_dim inv ON d.detail_id = inv.bk_detail_id
     ),
+    -- One row per supply: these CTEs are joined on supply_id alone, so with one
+    -- row per supply line a supply with k lines matched k*k times and its
+    -- quantities and costs were multiplied by k^2.
     start_dates AS (
-        SELECT 
+        SELECT DISTINCT
             sd.supply_id AS supply_id, 
             dd.date_id AS start_date_dim_id
         FROM supply_data sd
@@ -242,7 +245,7 @@ BEGIN
         AND EXTRACT(DAY FROM sd.supply_date) = dd.day
     ),
     end_dates AS (
-        SELECT 
+        SELECT DISTINCT
             sd.supply_id AS supply_id, 
             dd.date_id AS end_date_dim_id
         FROM supply_data sd
