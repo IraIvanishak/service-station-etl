@@ -6,10 +6,10 @@ DECLARE
 begin
 
     -- Отримати останній час завантаження з таблиці метаданих
-    SELECT load_datetime INTO last_load_time 
-    FROM meta.dataloadhistory 
-    ORDER BY load_datetime DESC 
-    LIMIT 1;
+    -- Before the first load there is no history: take everything. (Comparing
+    -- with NULL matched no rows, so the first incremental load was empty.)
+    SELECT COALESCE(max(load_datetime), '-infinity') INTO last_load_time
+    FROM meta.dataloadhistory;
 
     -- Вивести отриманий час завантаження
     RAISE NOTICE 'Last load time: %', last_load_time;

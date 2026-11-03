@@ -210,6 +210,23 @@ func TestIncrementalLoadMatchesFullLoad(t *testing.T) {
 	}
 }
 
+// With no load history yet, an incremental load has to take everything.
+func TestIncrementalLoadWithoutHistoryLoadsEverything(t *testing.T) {
+	db := testDB(t)
+	loads := etl.NewRunner(db)
+
+	run(t, loads.Incremental)
+	incremental := warehouseSnapshot(t, db)
+	run(t, loads.Full)
+	full := warehouseSnapshot(t, db)
+
+	for table, want := range full {
+		if diff := firstDiff(incremental[table], want); diff != "" {
+			t.Errorf("%s differs (-incremental +full):\n%s", table, diff)
+		}
+	}
+}
+
 // warehouseSnapshot renders every warehouse table by business keys and
 // values, leaving out surrogate ids that differ between load strategies.
 func warehouseSnapshot(t *testing.T, db *sql.DB) map[string][]string {
