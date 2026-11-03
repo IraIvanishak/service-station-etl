@@ -50,8 +50,9 @@ BEGIN
         d.price, 
         d.dimensions, 
         d.weight
-    FROM stage.inventory AS i
-    JOIN stage.detail AS d ON i.detail_id = d.detail_id;
+    -- One row per detail. Joining stage.inventory duplicated details stocked
+    -- at several stations and dropped details that are not in stock.
+    FROM stage.detail AS d;
 
     GET DIAGNOSTICS row_count = ROW_COUNT;
     db_table_count := db_table_count + 1;
@@ -138,7 +139,7 @@ BEGIN
     SELECT 
         si.service_inventory_id AS service_inventory_fact_id,
         sr.service_repairs_id AS service_repair_dim_id,
-        i.inventory_id AS inventory_dim_id,
+        inv.inventory_dim_id AS inventory_dim_id,
         (d.price * si.amount) AS parts_cost,
         (sr.service_total_price + (d.price * si.amount)) AS total_cost,
         (d.price * si.amount) / NULLIF((sr.service_total_price + (d.price * si.amount)), 0) * 100 AS parts_cost_percentage,
@@ -151,6 +152,7 @@ BEGIN
     JOIN stage.service_repair sr ON sr.service_repairs_id = si.service_repair_id
     JOIN stage.inventory i ON si.inventory_id = i.inventory_id
     JOIN stage.detail d ON i.detail_id = d.detail_id
+    JOIN storage.inventory_dim inv ON inv.bk_detail_id = d.detail_id
     JOIN stage.service s ON sr.service_id = s.service_id
     JOIN stage.repair r ON sr.repair_id = r.repair_id
     JOIN count_estimated_duration ed ON sr.repair_id = ed.repair_id;
@@ -161,7 +163,7 @@ BEGIN
     -- Inserting data into supply_details_fact
     WITH supply_data AS (
         SELECT
-            d.detail_id AS inventory_dim_id,
+            inv.inventory_dim_id AS inventory_dim_id,
             s.supply_id,
             sup.supplier_id,
             s.supply_date,

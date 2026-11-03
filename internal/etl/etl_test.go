@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -39,6 +40,46 @@ func TestFullLoadFillsDimensions(t *testing.T) {
 	}
 	if n := scalar[int](t, db, "SELECT count(*) FROM meta.dataloadhistory"); n != 1 {
 		t.Errorf("meta.dataloadhistory has %d rows after one load, want 1", n)
+	}
+}
+
+// In the seed data inventory_id happens to equal detail_id. Stock the same
+// detail at a second station so they differ, and use that stock in a repair.
+func TestFullLoadKeysPartsUsageByDetail(t *testing.T) {
+	db := testDB(t)
+	inventoryID := scalar[int](t, db, `
+		INSERT INTO public.inventory (detail_id, quantity, service_station_id)
+		VALUES (1, 5, 2) RETURNING inventory_id`)
+	exec(t, db, `
+		INSERT INTO public.service_inventory (service_repair_id, inventory_id, amount)
+		VALUES ((SELECT min(service_repairs_id) FROM public.service_repairs), $1, 2)`, inventoryID)
+
+	run(t, etl.NewRunner(db).Full)
+
+	mismatched := scalar[int](t, db, `
+		SELECT count(*)
+		FROM storage.service_inventory_fact f
+		JOIN public.service_inventory si ON si.service_inventory_id = f.bk_service_inventory_id
+		JOIN public.inventory i ON i.inventory_id = si.inventory_id
+		JOIN storage.inventory_dim d ON d.inventory_dim_id = f.inventory_dim_id
+		WHERE d.bk_detail_id <> i.detail_id`)
+	if mismatched != 0 {
+		t.Errorf("%d parts-usage facts point at the wrong detail", mismatched)
+	}
+}
+
+// Every (detail, supplier, supply date) group in the OLTP data must become
+// one supply fact row, including details that are not in stock anywhere.
+func TestFullLoadKeepsEverySupplyGroup(t *testing.T) {
+	db := testDB(t)
+	run(t, etl.NewRunner(db).Full)
+
+	want := scalar[int](t, db, `
+		SELECT count(DISTINCT (sd.detail_id, s.supplier_id, s.supply_date))
+		FROM public.supply_details sd JOIN public.supply s USING (supply_id)`)
+	got := scalar[int](t, db, "SELECT count(*) FROM storage.supply_details_fact")
+	if got != want {
+		t.Errorf("supply_details_fact has %d rows, want %d", got, want)
 	}
 }
 
@@ -76,7 +117,29 @@ func testDB(t *testing.T) *sql.DB {
 		}
 		admin.Close()
 	})
+
+	// The template holds the procedures from when the container was created;
+	// load the working-tree versions so SQL edits are tested without a
+	// `make db-reset`. (Schema changes still need one.)
+	for _, f := range procedureFiles {
+		src, err := os.ReadFile(filepath.Join("..", "..", "db", "init", f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec(string(src)); err != nil {
+			t.Fatalf("load %s: %v", f, err)
+		}
+	}
 	return db
+}
+
+var procedureFiles = []string{
+	"06_meta_procedures.sql",
+	"07_stage_full_load.sql",
+	"08_stage_incremental_load.sql",
+	"09_warehouse_full_load.sql",
+	"10_warehouse_incremental_load.sql",
+	"11_warehouse_clear.sql",
 }
 
 func run(t *testing.T, load func(context.Context) error) {
