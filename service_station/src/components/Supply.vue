@@ -366,6 +366,7 @@ h1 {
 </template>
 
 <script>
+import { API_URL } from '@/api';
 import AddSupply from "./AddSupply.vue"
 export default {
     components: {
@@ -382,7 +383,7 @@ export default {
     },
     methods: {
         async setDelivered(supplyId) {
-            await fetch(`http://localhost:3000/supplies/${supplyId}`, {
+            await fetch(`${API_URL}/supplies/${supplyId}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -390,7 +391,7 @@ export default {
                 body: JSON.stringify({ status: 'Delivered' }),
             });
             try {
-                const response = await fetch('http://localhost:3000/supplies');
+                const response = await fetch(`${API_URL}/supplies`);
                 const supplies = await response.json();
                 this.supplies = supplies.sort((a, b) => b.supply_id - a.supply_id);
             } catch (error) {
@@ -402,7 +403,7 @@ export default {
         },
         async deleteSupply(supplyId) {
             try {
-                await fetch(`http://localhost:3000/supplies/${supplyId}`, {
+                await fetch(`${API_URL}/supplies/${supplyId}`, {
                     method: 'DELETE',
                 });
                 this.supplies = this.supplies.filter((supply) => supply.supply_id !== supplyId);
@@ -421,7 +422,7 @@ export default {
         },
         async fetchSupplies() {
             try {
-                const response = await fetch('http://localhost:3000/supplies');
+                const response = await fetch(`${API_URL}/supplies`);
                 const supplies = await response.json();
                 this.supplies = supplies.sort((a, b) => b.supply_id - a.supply_id);
             } catch (error) {

@@ -138,6 +138,7 @@ i {
 
 
 <script>
+import { API_URL } from '@/api';
 export default {
     data() {
         return {
@@ -158,7 +159,7 @@ export default {
         addClient() {
             // Add your method for submitting the new client data to your server
             console.log('Adding client:', this.newClient);
-            fetch('http://localhost:3000/client', {
+            fetch(`${API_URL}/client`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -176,7 +177,7 @@ export default {
             this.newClient = { FirstName: '', LastName: '', PhoneNumber: '' };
         },
         fetchClients() {
-            fetch('http://localhost:3000/clients')
+            fetch(`${API_URL}/clients`)
                 .then(response => response.json())
                 .then(data => {
                     this.clients = data;
@@ -184,7 +185,7 @@ export default {
                 .catch(error => console.error('Error fetching clients:', error));
         },
         fetchCars() {
-            fetch('http://localhost:3000/carclient')
+            fetch(`${API_URL}/carclient`)
                 .then(response => response.json())
                 .then(data => {
                     this.cars = data;

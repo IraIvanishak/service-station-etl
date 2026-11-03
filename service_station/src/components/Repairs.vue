@@ -329,6 +329,7 @@ h5 {
 </style>
 
 <script>
+import { API_URL } from '@/api';
 import AddStationModal from './AddStationModal.vue';
 
 export default {
@@ -373,7 +374,7 @@ export default {
             console.log(this.newDetail.detailId)
             try {
                 console.log('Adding detail to service:', this.newDetail);
-                const response = await fetch(`http://localhost:3000/repairsdetails`, {
+                const response = await fetch(`${API_URL}/repairsdetails`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -399,7 +400,7 @@ export default {
         },
         async getDetails() {
             try {
-                const response = await fetch(`http://localhost:3000/details`);
+                const response = await fetch(`${API_URL}/details`);
                 if (response.ok) {
                     const details = await response.json();
                     this.details = details;
@@ -413,7 +414,7 @@ export default {
         async addServiceToRepair() {
             try {
                 console.log('Adding service to repair:', this.newService);
-                const response = await fetch(`http://localhost:3000/repairs/${this.addingServiceToRepair}/services`, {
+                const response = await fetch(`${API_URL}/repairs/${this.addingServiceToRepair}/services`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -437,7 +438,7 @@ export default {
         },
         async fetchServices() {
             try {
-                const response = await fetch('http://localhost:3000/services');
+                const response = await fetch(`${API_URL}/services`);
                 if (response.ok) {
                     const services = await response.json();
                     this.servicesList = services;
@@ -458,7 +459,7 @@ export default {
         async fetchRepairs() {
             const stationId = this.$route.params.id;
             try {
-                const response = await fetch(`http://localhost:3000/repairs`);
+                const response = await fetch(`${API_URL}/repairs`);
                 const repairs = await response.json();
                 this.repairs = repairs;
                 this.repairs = this.repairs.sort((a, b) => b.repairId - a.repairId);
@@ -470,7 +471,7 @@ export default {
         },
         async deleteRepair(repairId) {
             try {
-                await fetch(`http://localhost:3000/repairs/${repairId}`, {
+                await fetch(`${API_URL}/repairs/${repairId}`, {
                     method: 'DELETE'
                 });
                 // Optionally, remove the deleted repair from the local array

@@ -1,14 +1,11 @@
--- name: ClearMeta :exec
-CALL meta.clearmeat();
-
 -- name: ClearStorage :exec
 CALL storage.clearstorage();
 
 -- name: OltpToStage :exec
-CALL public.transfer_data_to_stage();
+CALL stage.transfer_data_to_stage();
 
 -- name: StageToOlap :exec
-CALL stage.fill_storage_from_stage();
+CALL storage.fill_storage_from_stage();
 
 -- name: GetStageData :many
 SELECT 'inventory' AS table_name, COUNT(*) AS row_count FROM stage.inventory
@@ -34,7 +31,7 @@ SELECT 'repair', COUNT(*) FROM stage.repair;
 CALL stage.fill_staging_from_oltp_incremental();
 
 -- name: StageToOlapIncremental :exec
-CALL stage.fill_olap_from_staging_incremental();
+CALL storage.fill_olap_from_staging_incremental();
 
 -- name: GetLastDataLoadHistoryID :one
 SELECT data_load_history_id

@@ -83,6 +83,7 @@
 
 
 <script>
+import { API_URL } from '@/api';
 export default {
   name: 'AddStationModal',
 
@@ -111,7 +112,7 @@ export default {
     async fetchEmployees() {
       // API call to get employees and fill the this.employees array
       try {
-        const response = await fetch('http://localhost:3000/employees');
+        const response = await fetch(`${API_URL}/employees`);
         const data = await response.json();
         this.employees = data;
       } catch (error) {
@@ -121,7 +122,7 @@ export default {
     async fetchClients() {
       // API call to get clients and fill the this.clients array
       try {
-        const response = await fetch('http://localhost:3000/clients');
+        const response = await fetch(`${API_URL}/clients`);
         const data = await response.json();
         this.clients = data;
       } catch (error) {
@@ -131,7 +132,7 @@ export default {
     async fetchCars() {
       // API call to get cars and fill the this.cars array
       try {
-        const response = await fetch('http://localhost:3000/cars');
+        const response = await fetch(`${API_URL}/cars`);
         const data = await response.json();
         this.cars = data;
       } catch (error) {
@@ -149,7 +150,7 @@ export default {
       console.log(JSON.stringify(this.newRepair));
 
       try {
-        fetch('http://localhost:3000/repairs', {
+        fetch(`${API_URL}/repairs`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

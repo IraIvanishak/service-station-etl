@@ -1,4 +1,5 @@
 <script>
+import { API_URL } from '@/api';
 import StationDetail from './StationDetail.vue';
 import getUnicodeFlagIcon from 'country-flag-icons/unicode'
 import { countries } from 'country-flag-icons'
@@ -85,7 +86,7 @@ export default {
         async fetchStations() {
             try {
                 console.log(countries)
-                const response = await fetch('http://127.0.0.1:3000/stations');
+                const response = await fetch(`${API_URL}/stations`);
                 const data = await response.json();
                 this.stations = data;
                 this.stations = data.map(station => {
@@ -102,7 +103,7 @@ export default {
         // add new station post http://127.0.0.1:3000/stations
         async addStation() {
             try {
-                const response = await fetch('http://127.0.0.1:3000/stations', {
+                const response = await fetch(`${API_URL}/stations`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -120,7 +121,7 @@ export default {
         },
         async submitUpdate(station) {
             try {
-                const response = await fetch(`http://127.0.0.1:3000/stations`, {
+                const response = await fetch(`${API_URL}/stations`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -144,7 +145,7 @@ export default {
             console.log(stationId)
             try {
                 let id = stationId
-                const response = await fetch(`http://127.0.0.1:3000/stations/${id}`, {
+                const response = await fetch(`${API_URL}/stations/${id}`, {
                     method: 'DELETE',
                 });
                 this.fetchStations();
@@ -159,7 +160,7 @@ export default {
         },
         async listCities() {
             try {
-                const response = await fetch('http://127.0.0.1:3000/city');
+                const response = await fetch(`${API_URL}/city`);
                 const data = await response.json();
                 this.cities = data;
             } catch (error) {

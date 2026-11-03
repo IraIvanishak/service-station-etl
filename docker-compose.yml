@@ -1,12 +1,21 @@
-version: '3'
-
 services:
   db:
-    image: postgres
+    image: postgres:16-alpine
     environment:
       POSTGRES_DB: service_station
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    ports: 
+      POSTGRES_PASSWORD: postgres
+    ports:
       - "5452:5432"
-    
+    volumes:
+      # Runs once, on an empty volume: schemas, seed data, ETL procedures.
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d service_station"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  pgdata:

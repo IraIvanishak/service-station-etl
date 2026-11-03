@@ -7,16 +7,18 @@ SELECT
     ro.total_sum,
     rs.title AS repair_status,
     ps.title AS payment_status,
-    concat(emp.first_name, ' ', emp.last_name) AS assigned_employee,
+    concat(emp.first_name, ' ', emp.last_name)::text AS assigned_employee,
     cc.registration_number,
     cc.description AS vehicle_description,
-    concat(cl.first_name, ' ', cl.last_name) AS client_name,
+    concat(cl.first_name, ' ', cl.last_name)::text AS client_name,
     car.model AS vehicle_model,
     car.year AS vehicle_year,
+    srep.service_repairs_id,
     ser.name AS service_name,
     srep.quantity AS service_quantity,
     srep.completion_date,
     srep.service_total_price,
+    inv.service_inventory_id,
     inv.amount AS inventory_amount,
     det.description AS inventory_item_description,
     det.price AS detail_item_price_per_unit,
@@ -37,4 +39,4 @@ LEFT JOIN public.inventory invdet ON inv.inventory_id = invdet.inventory_id
 LEFT JOIN public.detail det ON invdet.detail_id = det.detail_id
 left join public.service_station ss on emp.service_station_id = ss.station_id 
 ORDER BY 
-    ro.repair_id;
+    ro.repair_id, srep.service_repairs_id, inv.service_inventory_id;

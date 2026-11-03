@@ -200,6 +200,7 @@ button:hover {
 
 
 <script>
+import { API_URL } from '@/api';
 export default {
   data() {
     return {
@@ -220,7 +221,7 @@ export default {
   methods: {
     async isDataf() {
       try {
-        const response = await fetch('http://localhost:3000/supply-cube');
+        const response = await fetch(`${API_URL}/supply-cube`);
         const data = await response.json();
         if (data.length > 0) {
           this.isData = true;
@@ -233,7 +234,7 @@ export default {
     },
     async fetchStage() {
       try {
-        const response = await fetch('http://localhost:3000/stage');
+        const response = await fetch(`${API_URL}/stage`, { method: 'POST' });
 
         this.stage = await response.json();
       } catch (error) {
@@ -243,7 +244,7 @@ export default {
     },
     async clearStorage() {
       try {
-        const response = await fetch('http://localhost:3000/clearmeta', {
+        const response = await fetch(`${API_URL}/clearmeta`, {
           method: 'POST' // Змініть на потрібний метод та URL
         });
         this.isData = false;
@@ -255,7 +256,7 @@ export default {
     },
     async fetchDataLoadHistory() {
       try {
-        const response = await fetch('http://localhost:3000/meta');
+        const response = await fetch(`${API_URL}/meta`);
         const data = await response.json();
         this.dataLoadHistory = data;
       } catch (error) {
@@ -264,7 +265,7 @@ export default {
     },
     async performInitialLoad() {
       try {
-        const response = await fetch('http://localhost:3000/init', {
+        const response = await fetch(`${API_URL}/init`, {
           method: 'POST'
         });
         if (response.ok) {
@@ -286,7 +287,7 @@ export default {
         return;
       }
       try {
-        const response = await fetch('http://localhost:3000/incremental', {
+        const response = await fetch(`${API_URL}/incremental`, {
           method: 'POST'
         });
         if (response.ok) {

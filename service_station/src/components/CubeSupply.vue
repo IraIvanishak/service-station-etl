@@ -79,6 +79,7 @@
 
 
 <script>
+import { API_URL } from '@/api';
 import axios from 'axios';
 
 export default {
@@ -165,7 +166,7 @@ export default {
             console.log("Unique Filters:", JSON.stringify(this.uniqueFilters.DateRange, null, 2)); // Debug
         },
         fetchInventoryData() {
-            axios.get('http://localhost:3000/supply-cube')
+            axios.get(`${API_URL}/supply-cube`)
                 .then(response => {
                     this.sullyData = response.data;
                     this.updateUniqueFilters();

@@ -32,7 +32,8 @@ left join
 left join 
 	service_station ss2 on ss2.station_id = i.service_station_id 
 left join 
-	detail d on d.detail_id = sd.detail_id;
+	detail d on d.detail_id = sd.detail_id
+ORDER BY s.supply_id, sd.supply_details_id;
 
 
 -- name: NewSupply :one
@@ -54,25 +55,29 @@ VALUES (
 )
 RETURNING supply_id;
 
--- name: GetSupplyDetailPrice :one
-SELECT 
-    price
-FROM
-    detail
-WHERE
-    detail_id = @detail_id;
+-- name: SetSupplyNumber :exec
+UPDATE supply SET supply_number = @supply_number WHERE supply_id = @supply_id;
 
 -- name: NewSupplyDetail :one
-INSERT INTO supply_details
-(supply_id, detail_id, quantity, price_per_unit)
-Values
-(@supply_id, @detail_id, @quantity, @price_per_unit)
-Returning supply_details_id;
+-- Priced from the detail's catalog price; no row if the detail does not exist.
+INSERT INTO supply_details (supply_id, detail_id, quantity, price_per_unit)
+SELECT sqlc.arg(supply_id)::int4, d.detail_id, sqlc.arg(quantity)::int4, d.price
+FROM detail d
+WHERE d.detail_id = sqlc.arg(detail_id)::int4
+RETURNING supply_details_id;
+
+-- name: UpdateSupplyTotal :exec
+UPDATE supply
+SET total_sum = (SELECT coalesce(sum(quantity * price_per_unit), 0)
+                 FROM supply_details WHERE supply_id = sqlc.arg(supply_id)::int4)
+WHERE supply_id = sqlc.arg(supply_id)::int4;
 
 -- name: StoreInventory :one
-UPDATE inventory
-SET quantity = quantity + @quantity
-WHERE detail_id = @detail_id
+-- Add delivered parts to one station's stock, creating the stock row if needed.
+INSERT INTO inventory (detail_id, service_station_id, quantity)
+VALUES (@detail_id, @service_station_id, @quantity)
+ON CONFLICT (detail_id, service_station_id)
+DO UPDATE SET quantity = inventory.quantity + EXCLUDED.quantity
 RETURNING inventory_id;
 
 
@@ -82,17 +87,6 @@ INSERT INTO supply_invoice
 Values
 (@supply_details_id, @invoice_number, @inventory_id)
 Returning supply_invoice_id;
-
-
--- name: GetSupplyByID :one
-SELECT 
-    s.supply_id,
-    s.supply_number,
-    s.supply_date
-FROM
-    supply s
-WHERE
-    s.supply_id = @supply_id;
 
 
 -- name: GetSupplyDetailsByID :many
@@ -123,7 +117,7 @@ SET status_id = @status_id
 WHERE supply_id = @supply_id
 RETURNING supply_id;
 
--- name: DeleteSupply :exec
+-- name: DeleteSupply :execrows
 DELETE FROM supply
 WHERE supply_id = @supply_id;
 
