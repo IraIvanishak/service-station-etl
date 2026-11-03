@@ -126,6 +126,27 @@ func TestFullLoadSupplyTotalsMatchOLTP(t *testing.T) {
 	}
 }
 
+func TestIncrementalLoadAppliesChanges(t *testing.T) {
+	db := testDB(t)
+	loads := etl.NewRunner(db)
+	run(t, loads.Full)
+
+	exec(t, db, "UPDATE public.service SET price = 99.50 WHERE service_id = 45")
+	exec(t, db, "UPDATE public.service_repairs SET quantity = quantity + 1 WHERE service_repairs_id = 4")
+	run(t, loads.Incremental)
+
+	if price := scalar[string](t, db, "SELECT price::text FROM storage.service_dim WHERE bk_service_id = 45"); price != "99.50" {
+		t.Errorf("service_dim price = %s, want 99.50", price)
+	}
+	want := scalar[int](t, db, "SELECT quantity FROM public.service_repairs WHERE service_repairs_id = 4")
+	if got := scalar[int](t, db, "SELECT quantity FROM storage.service_repair_dim WHERE bk_service_repair = 4"); got != want {
+		t.Errorf("service_repair_dim quantity = %d, want %d", got, want)
+	}
+	if n := scalar[int](t, db, "SELECT count(*) FROM meta.dataloadhistory"); n != 2 {
+		t.Errorf("meta.dataloadhistory has %d rows after two loads, want 2", n)
+	}
+}
+
 // --- helpers ---------------------------------------------------------------
 
 // testDB returns a connection to a throwaway copy of the seeded database.

@@ -102,6 +102,8 @@ CREATE TABLE storage.service_repair_dim (
 	complete_date_dim_id int4 NULL,
 	bk_service_repair int4 NOT NULL,
 	CONSTRAINT service_repair_dim_pkey PRIMARY KEY (service_repair_dim_id),
+	-- Business key; the incremental load upserts on it.
+	CONSTRAINT service_repair_dim_bk_service_repair_key UNIQUE (bk_service_repair),
 	CONSTRAINT service_repair_dim_date_time_dim_id_fkey FOREIGN KEY (complete_date_dim_id) REFERENCES storage.date_dim(date_id),
 	CONSTRAINT service_repair_dim_repair_id_fkey FOREIGN KEY (repair_id) REFERENCES storage.repair_dim(repair_dim_id),
 	CONSTRAINT service_repair_dim_service_id_fkey FOREIGN KEY (service_id) REFERENCES storage.service_dim(service_dim_id)
@@ -123,6 +125,8 @@ CREATE TABLE storage.supply_details_fact (
 	start_date_dim_id int4 NULL,
 	end_date_dim_id int4 NULL,
 	CONSTRAINT supply_details_fact_pkey PRIMARY KEY (supply_details_fact_id),
+	-- Grain of the fact; the incremental load upserts on it.
+	CONSTRAINT supply_details_fact_grain_key UNIQUE (detail_dim_id, supplier_id, start_date_dim_id, end_date_dim_id),
 	CONSTRAINT fk_supply_details_fact_end_date FOREIGN KEY (end_date_dim_id) REFERENCES storage.date_dim(date_id),
 	CONSTRAINT fk_supply_details_fact_start_date FOREIGN KEY (start_date_dim_id) REFERENCES storage.date_dim(date_id),
 	CONSTRAINT supply_details_fact_detail_dim_id_fkey FOREIGN KEY (detail_dim_id) REFERENCES storage.inventory_dim(inventory_dim_id),
