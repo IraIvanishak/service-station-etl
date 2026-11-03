@@ -8,6 +8,7 @@ package dbs
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const addServiceStation = `-- name: AddServiceStation :exec
@@ -84,17 +85,6 @@ func (q *Queries) DeleteServiceStation(ctx context.Context, stationID int32) (in
 		return 0, err
 	}
 	return result.RowsAffected()
-}
-
-const getServicePriceById = `-- name: GetServicePriceById :one
-SELECT price FROM service WHERE service_id = $1
-`
-
-func (q *Queries) GetServicePriceById(ctx context.Context, serviceID int32) (sql.NullString, error) {
-	row := q.db.QueryRowContext(ctx, getServicePriceById, serviceID)
-	var price sql.NullString
-	err := row.Scan(&price)
-	return price, err
 }
 
 const getServiceRepairByRepairIdAndServiceName = `-- name: GetServiceRepairByRepairIdAndServiceName :one
@@ -698,29 +688,33 @@ func (q *Queries) StoreServiceInventory(ctx context.Context, arg StoreServiceInv
 	return err
 }
 
-const storeServiceRepair = `-- name: StoreServiceRepair :exec
-INSERT INTO service_repairs (service_id, repair_id, quantity, completion_date, service_total_price) VALUES (
-    $1, $2, $3, $4, $5
-)
+const storeServiceRepair = `-- name: StoreServiceRepair :one
+INSERT INTO service_repairs (service_id, repair_id, quantity, completion_date, service_total_price)
+SELECT s.service_id, $1::int4, $2::int4, $3::date,
+       s.price * $2::int4
+FROM service s
+WHERE s.service_id = $4::int4
+RETURNING service_repairs_id
 `
 
 type StoreServiceRepairParams struct {
-	ServiceID         sql.NullInt32
-	RepairID          sql.NullInt32
-	Quantity          sql.NullInt32
-	CompletionDate    sql.NullTime
-	ServiceTotalPrice sql.NullString
+	RepairID       int32
+	Quantity       int32
+	CompletionDate time.Time
+	ServiceID      int32
 }
 
-func (q *Queries) StoreServiceRepair(ctx context.Context, arg StoreServiceRepairParams) error {
-	_, err := q.db.ExecContext(ctx, storeServiceRepair,
-		arg.ServiceID,
+// Priced in numeric from the service's catalog price; no row if the service does not exist.
+func (q *Queries) StoreServiceRepair(ctx context.Context, arg StoreServiceRepairParams) (int32, error) {
+	row := q.db.QueryRowContext(ctx, storeServiceRepair,
 		arg.RepairID,
 		arg.Quantity,
 		arg.CompletionDate,
-		arg.ServiceTotalPrice,
+		arg.ServiceID,
 	)
-	return err
+	var service_repairs_id int32
+	err := row.Scan(&service_repairs_id)
+	return service_repairs_id, err
 }
 
 const updateServiceStation = `-- name: UpdateServiceStation :exec

@@ -247,6 +247,43 @@ func TestListRepairsMatchesDatabase(t *testing.T) {
 	}
 }
 
+func TestLinesArePricedFromTheCatalog(t *testing.T) {
+	app, db := newServer(t)
+	repairID := testdb.Scalar[int](t, db, "SELECT min(repair_id) FROM repair_order")
+
+	mustCall(t, app, "POST", fmt.Sprintf("/repairs/%d/services", repairID), map[string]any{"serviceId": 46, "quantity": 3})
+	want := testdb.Scalar[string](t, db, "SELECT (price * 3)::text FROM service WHERE service_id = 46")
+	got := testdb.Scalar[string](t, db, `
+		SELECT service_total_price::text FROM service_repairs
+		WHERE repair_id = $1 ORDER BY service_repairs_id DESC LIMIT 1`, repairID)
+	if got != want {
+		t.Errorf("service line total = %s, want %s", got, want)
+	}
+	if code, body := call(t, app, "POST", fmt.Sprintf("/repairs/%d/services", repairID),
+		map[string]any{"serviceId": 999999, "quantity": 1}); code != 404 {
+		t.Errorf("unknown service: %d %s, want 404", code, body)
+	}
+
+	mustCall(t, app, "POST", "/supplies", map[string]any{
+		"status": "Pending", "supplyDate": "2024-05-15T00:00:00Z", "SupplierID": 5, "EmployeeID": 3,
+		"details": []map[string]any{
+			{"DetailID": 3, "quantity": 3, "StationID": 3},
+			{"DetailID": 4, "quantity": 7, "StationID": 4},
+		},
+	})
+	mismatch := testdb.Scalar[int](t, db, `
+		SELECT count(*) FROM supply s
+		WHERE s.supply_id = (SELECT max(supply_id) FROM supply)
+		  AND s.total_sum IS DISTINCT FROM (
+		      SELECT sum(sd.quantity * sd.price_per_unit) FROM supply_details sd WHERE sd.supply_id = s.supply_id)
+		   OR EXISTS (
+		      SELECT 1 FROM supply_details sd JOIN detail d USING (detail_id)
+		      WHERE sd.supply_id = s.supply_id AND sd.price_per_unit <> d.price)`)
+	if mismatch != 0 {
+		t.Error("new supply: lines are not priced from the catalog or the total is not their sum")
+	}
+}
+
 // --- helpers ---------------------------------------------------------------
 
 func newServer(t *testing.T) (*fiber.App, *sql.DB) {

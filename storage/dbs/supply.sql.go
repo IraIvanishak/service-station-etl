@@ -53,22 +53,6 @@ func (q *Queries) GetInventoryIDbyDetailsID(ctx context.Context, detailID sql.Nu
 	return inventory_id, err
 }
 
-const getSupplyDetailPrice = `-- name: GetSupplyDetailPrice :one
-SELECT 
-    price
-FROM
-    detail
-WHERE
-    detail_id = $1
-`
-
-func (q *Queries) GetSupplyDetailPrice(ctx context.Context, detailID int32) (sql.NullString, error) {
-	row := q.db.QueryRowContext(ctx, getSupplyDetailPrice, detailID)
-	var price sql.NullString
-	err := row.Scan(&price)
-	return price, err
-}
-
 const getSupplyDetailsByID = `-- name: GetSupplyDetailsByID :many
 SELECT 
     sd.supply_details_id,
@@ -252,27 +236,22 @@ func (q *Queries) NewSupply(ctx context.Context, arg NewSupplyParams) (int32, er
 }
 
 const newSupplyDetail = `-- name: NewSupplyDetail :one
-INSERT INTO supply_details
-(supply_id, detail_id, quantity, price_per_unit)
-Values
-($1, $2, $3, $4)
-Returning supply_details_id
+INSERT INTO supply_details (supply_id, detail_id, quantity, price_per_unit)
+SELECT $1::int4, d.detail_id, $2::int4, d.price
+FROM detail d
+WHERE d.detail_id = $3::int4
+RETURNING supply_details_id
 `
 
 type NewSupplyDetailParams struct {
-	SupplyID     sql.NullInt32
-	DetailID     sql.NullInt32
-	Quantity     sql.NullInt32
-	PricePerUnit sql.NullString
+	SupplyID int32
+	Quantity int32
+	DetailID int32
 }
 
+// Priced from the detail's catalog price; no row if the detail does not exist.
 func (q *Queries) NewSupplyDetail(ctx context.Context, arg NewSupplyDetailParams) (int32, error) {
-	row := q.db.QueryRowContext(ctx, newSupplyDetail,
-		arg.SupplyID,
-		arg.DetailID,
-		arg.Quantity,
-		arg.PricePerUnit,
-	)
+	row := q.db.QueryRowContext(ctx, newSupplyDetail, arg.SupplyID, arg.Quantity, arg.DetailID)
 	var supply_details_id int32
 	err := row.Scan(&supply_details_id)
 	return supply_details_id, err
@@ -352,4 +331,16 @@ func (q *Queries) StoreInventory(ctx context.Context, arg StoreInventoryParams) 
 	var inventory_id int32
 	err := row.Scan(&inventory_id)
 	return inventory_id, err
+}
+
+const updateSupplyTotal = `-- name: UpdateSupplyTotal :exec
+UPDATE supply
+SET total_sum = (SELECT coalesce(sum(quantity * price_per_unit), 0)
+                 FROM supply_details WHERE supply_id = $1::int4)
+WHERE supply_id = $1::int4
+`
+
+func (q *Queries) UpdateSupplyTotal(ctx context.Context, supplyID int32) error {
+	_, err := q.db.ExecContext(ctx, updateSupplyTotal, supplyID)
+	return err
 }

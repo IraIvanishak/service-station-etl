@@ -45,19 +45,8 @@ func (s *Server) createSupply(c *fiber.Ctx) error {
 
 	err := s.inTx(c.UserContext(), func(q *dbs.Queries) error {
 		ctx := c.UserContext()
-		prices := make([]float64, len(req.Details))
-		var total float64
-		for i, d := range req.Details {
-			price, err := q.GetSupplyDetailPrice(ctx, d.DetailID)
-			if err != nil {
-				return fmt.Errorf("detail %d: %w", d.DetailID, err)
-			}
-			prices[i] = dto.ParseFloat(price.String)
-			total += float64(d.Quantity) * prices[i]
-		}
-
 		supplyID, err := q.NewSupply(ctx, dbs.NewSupplyParams{
-			TotalSum:   sql.NullString{String: strconv.FormatFloat(total, 'f', 6, 64), Valid: true},
+			TotalSum:   sql.NullString{String: "0", Valid: true}, // summed from the lines below
 			StatusID:   sql.NullInt32{Int32: status, Valid: true},
 			SupplyDate: req.SupplyDate,
 			SupplierID: sql.NullInt32{Int32: req.SupplierID, Valid: true},
@@ -75,15 +64,14 @@ func (s *Server) createSupply(c *fiber.Ctx) error {
 			return err
 		}
 
-		for i, d := range req.Details {
+		for _, d := range req.Details {
 			lineID, err := q.NewSupplyDetail(ctx, dbs.NewSupplyDetailParams{
-				Quantity:     sql.NullInt32{Int32: d.Quantity, Valid: true},
-				SupplyID:     sql.NullInt32{Int32: supplyID, Valid: true},
-				DetailID:     sql.NullInt32{Int32: d.DetailID, Valid: true},
-				PricePerUnit: sql.NullString{String: strconv.FormatFloat(prices[i], 'f', 6, 64), Valid: true},
+				SupplyID: supplyID,
+				DetailID: d.DetailID,
+				Quantity: d.Quantity,
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("detail %d: %w", d.DetailID, err)
 			}
 			inventoryID, err := q.StoreInventory(ctx, dbs.StoreInventoryParams{
 				DetailID:         sql.NullInt32{Int32: d.DetailID, Valid: true},
@@ -103,7 +91,7 @@ func (s *Server) createSupply(c *fiber.Ctx) error {
 				}
 			}
 		}
-		return nil
+		return q.UpdateSupplyTotal(ctx, supplyID)
 	})
 	if err != nil {
 		return err

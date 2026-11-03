@@ -91,25 +91,14 @@ func (s *Server) addRepairService(c *fiber.Ctx) error {
 	if err := parseBody(c, &service); err != nil {
 		return err
 	}
-	ctx := c.UserContext()
-
-	price, err := s.q.GetServicePriceById(ctx, service.ServiceID)
-	if err != nil {
-		return fmt.Errorf("service %d: %w", service.ServiceID, err)
-	}
-	unitPrice := dto.ParseFloat(price.String)
-	err = s.q.StoreServiceRepair(ctx, dbs.StoreServiceRepairParams{
-		ServiceID:      sql.NullInt32{Int32: service.ServiceID, Valid: true},
-		Quantity:       sql.NullInt32{Int32: service.Quantity, Valid: true},
-		RepairID:       sql.NullInt32{Int32: repairID, Valid: true},
-		CompletionDate: sql.NullTime{Time: time.Now(), Valid: true},
-		ServiceTotalPrice: sql.NullString{
-			String: strconv.FormatFloat(unitPrice*float64(service.Quantity), 'f', 6, 64),
-			Valid:  true,
-		},
+	_, err = s.q.StoreServiceRepair(c.UserContext(), dbs.StoreServiceRepairParams{
+		ServiceID:      service.ServiceID,
+		Quantity:       service.Quantity,
+		RepairID:       repairID,
+		CompletionDate: time.Now(),
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("service %d: %w", service.ServiceID, err)
 	}
 	return c.JSON(service)
 }

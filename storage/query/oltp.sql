@@ -80,13 +80,14 @@ DELETE FROM service_repairs WHERE repair_id = @repair_id;
 -- name: DeleteOrder :execrows
 DELETE FROM repair_order WHERE repair_id = @repair_id;
 
--- name: GetServicePriceById :one
-SELECT price FROM service WHERE service_id = @service_id;
-
--- name: StoreServiceRepair :exec
-INSERT INTO service_repairs (service_id, repair_id, quantity, completion_date, service_total_price) VALUES (
-    @service_id, @repair_id, @quantity, @completion_date, @service_total_price
-);
+-- name: StoreServiceRepair :one
+-- Priced in numeric from the service's catalog price; no row if the service does not exist.
+INSERT INTO service_repairs (service_id, repair_id, quantity, completion_date, service_total_price)
+SELECT s.service_id, sqlc.arg(repair_id)::int4, sqlc.arg(quantity)::int4, sqlc.arg(completion_date)::date,
+       s.price * sqlc.arg(quantity)::int4
+FROM service s
+WHERE s.service_id = sqlc.arg(service_id)::int4
+RETURNING service_repairs_id;
 
 -- name: ListDetails :many 
 SELECT * FROM detail;

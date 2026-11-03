@@ -57,20 +57,19 @@ RETURNING supply_id;
 -- name: SetSupplyNumber :exec
 UPDATE supply SET supply_number = @supply_number WHERE supply_id = @supply_id;
 
--- name: GetSupplyDetailPrice :one
-SELECT 
-    price
-FROM
-    detail
-WHERE
-    detail_id = @detail_id;
-
 -- name: NewSupplyDetail :one
-INSERT INTO supply_details
-(supply_id, detail_id, quantity, price_per_unit)
-Values
-(@supply_id, @detail_id, @quantity, @price_per_unit)
-Returning supply_details_id;
+-- Priced from the detail's catalog price; no row if the detail does not exist.
+INSERT INTO supply_details (supply_id, detail_id, quantity, price_per_unit)
+SELECT sqlc.arg(supply_id)::int4, d.detail_id, sqlc.arg(quantity)::int4, d.price
+FROM detail d
+WHERE d.detail_id = sqlc.arg(detail_id)::int4
+RETURNING supply_details_id;
+
+-- name: UpdateSupplyTotal :exec
+UPDATE supply
+SET total_sum = (SELECT coalesce(sum(quantity * price_per_unit), 0)
+                 FROM supply_details WHERE supply_id = sqlc.arg(supply_id)::int4)
+WHERE supply_id = sqlc.arg(supply_id)::int4;
 
 -- name: StoreInventory :one
 -- Add delivered parts to one station's stock, creating the stock row if needed.
