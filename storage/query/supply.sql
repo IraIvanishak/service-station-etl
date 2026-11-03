@@ -73,9 +73,11 @@ Values
 Returning supply_details_id;
 
 -- name: StoreInventory :one
-UPDATE inventory
-SET quantity = quantity + @quantity
-WHERE detail_id = @detail_id
+-- Add delivered parts to one station's stock, creating the stock row if needed.
+INSERT INTO inventory (detail_id, service_station_id, quantity)
+VALUES (@detail_id, @service_station_id, @quantity)
+ON CONFLICT (detail_id, service_station_id)
+DO UPDATE SET quantity = inventory.quantity + EXCLUDED.quantity
 RETURNING inventory_id;
 
 

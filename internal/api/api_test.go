@@ -106,6 +106,39 @@ func TestDocumentNumbersAreUnique(t *testing.T) {
 	}
 }
 
+// Delivered parts go to the station named in the request, and only there.
+func TestSupplyStocksTheChosenStation(t *testing.T) {
+	app, db := newServer(t)
+	// Detail 3 is stocked at station 3 only; stock it at station 2 as well.
+	testdb.Exec(t, db, "INSERT INTO inventory (detail_id, quantity, service_station_id) VALUES (3, 10, 2)")
+	stock := func(station int) int {
+		return testdb.Scalar[int](t, db, `
+			SELECT coalesce(sum(quantity), 0) FROM inventory WHERE detail_id = 3 AND service_station_id = $1`, station)
+	}
+	before := map[int]int{1: stock(1), 2: stock(2), 3: stock(3)}
+
+	mustCall(t, app, "POST", "/supplies", map[string]any{
+		"status": "Delivered", "supplyDate": "2024-05-15T00:00:00Z", "SupplierID": 5, "EmployeeID": 3,
+		"details": []map[string]any{
+			{"DetailID": 3, "quantity": 4, "StationID": 2},
+			{"DetailID": 3, "quantity": 6, "StationID": 1}, // not stocked there yet
+		},
+	})
+
+	want := map[int]int{1: before[1] + 6, 2: before[2] + 4, 3: before[3]}
+	for station, w := range want {
+		if got := stock(station); got != w {
+			t.Errorf("detail 3 at station %d: %d units, want %d", station, got, w)
+		}
+	}
+	if code, body := call(t, app, "POST", "/supplies", map[string]any{
+		"status": "Delivered", "supplyDate": "2024-05-15T00:00:00Z", "SupplierID": 5, "EmployeeID": 3,
+		"details": []map[string]any{{"DetailID": 3, "quantity": 1}},
+	}); code != 400 {
+		t.Errorf("line without StationID: %d %s, want 400", code, body)
+	}
+}
+
 // --- helpers ---------------------------------------------------------------
 
 func newServer(t *testing.T) (*fiber.App, *sql.DB) {

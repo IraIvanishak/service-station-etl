@@ -37,6 +37,11 @@ func (s *Server) createSupply(c *fiber.Ctx) error {
 	if req.Status == "Pending" {
 		status = supplyPending
 	}
+	for i, d := range req.Details {
+		if d.StationID == 0 {
+			return badRequest("details[%d]: StationID is required", i)
+		}
+	}
 
 	err := s.inTx(c.UserContext(), func(q *dbs.Queries) error {
 		ctx := c.UserContext()
@@ -81,8 +86,9 @@ func (s *Server) createSupply(c *fiber.Ctx) error {
 				return err
 			}
 			inventoryID, err := q.StoreInventory(ctx, dbs.StoreInventoryParams{
-				Quantity: sql.NullInt32{Int32: d.Quantity, Valid: true},
-				DetailID: sql.NullInt32{Int32: d.DetailID, Valid: true},
+				DetailID:         sql.NullInt32{Int32: d.DetailID, Valid: true},
+				ServiceStationID: sql.NullInt32{Int32: d.StationID, Valid: true},
+				Quantity:         sql.NullInt32{Int32: d.Quantity, Valid: true},
 			})
 			if err != nil {
 				return fmt.Errorf("stock for detail %d: %w", d.DetailID, err)

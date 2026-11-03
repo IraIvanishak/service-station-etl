@@ -330,19 +330,22 @@ func (q *Queries) SetSupplyStatus(ctx context.Context, arg SetSupplyStatusParams
 }
 
 const storeInventory = `-- name: StoreInventory :one
-UPDATE inventory
-SET quantity = quantity + $1
-WHERE detail_id = $2
+INSERT INTO inventory (detail_id, service_station_id, quantity)
+VALUES ($1, $2, $3)
+ON CONFLICT (detail_id, service_station_id)
+DO UPDATE SET quantity = inventory.quantity + EXCLUDED.quantity
 RETURNING inventory_id
 `
 
 type StoreInventoryParams struct {
-	Quantity sql.NullInt32
-	DetailID sql.NullInt32
+	DetailID         sql.NullInt32
+	ServiceStationID sql.NullInt32
+	Quantity         sql.NullInt32
 }
 
+// Add delivered parts to one station's stock, creating the stock row if needed.
 func (q *Queries) StoreInventory(ctx context.Context, arg StoreInventoryParams) (int32, error) {
-	row := q.db.QueryRowContext(ctx, storeInventory, arg.Quantity, arg.DetailID)
+	row := q.db.QueryRowContext(ctx, storeInventory, arg.DetailID, arg.ServiceStationID, arg.Quantity)
 	var inventory_id int32
 	err := row.Scan(&inventory_id)
 	return inventory_id, err
