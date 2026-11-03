@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http/httptest"
 	"testing"
@@ -136,6 +137,44 @@ func TestSupplyStocksTheChosenStation(t *testing.T) {
 		"details": []map[string]any{{"DetailID": 3, "quantity": 1}},
 	}); code != 400 {
 		t.Errorf("line without StationID: %d %s, want 400", code, body)
+	}
+}
+
+func TestDeleteRepairRemovesItsServicesAndParts(t *testing.T) {
+	app, db := newServer(t)
+	repairID := testdb.Scalar[int](t, db, `
+		SELECT min(sr.repair_id) FROM service_repairs sr
+		JOIN service_inventory si ON si.service_repair_id = sr.service_repairs_id`)
+
+	mustCall(t, app, "DELETE", fmt.Sprintf("/repairs/%d", repairID), nil)
+
+	for _, q := range []string{
+		"SELECT count(*) FROM repair_order WHERE repair_id = $1",
+		"SELECT count(*) FROM service_repairs WHERE repair_id = $1",
+	} {
+		if n := testdb.Scalar[int](t, db, q, repairID); n != 0 {
+			t.Errorf("%d rows left: %s", n, q)
+		}
+	}
+	orphans := testdb.Scalar[int](t, db, `
+		SELECT count(*) FROM service_inventory si
+		WHERE NOT EXISTS (SELECT 1 FROM service_repairs sr WHERE sr.service_repairs_id = si.service_repair_id)`)
+	if orphans != 0 {
+		t.Errorf("%d parts usages point at deleted services", orphans)
+	}
+}
+
+func TestDeleteStatusCodes(t *testing.T) {
+	app, _ := newServer(t)
+	for path, want := range map[string]int{
+		"/repairs/999999":  404,
+		"/supplies/999999": 404,
+		"/stations/999999": 404,
+		"/stations/1":      409, // employees and stock still reference it
+	} {
+		if code, body := call(t, app, "DELETE", path, nil); code != want {
+			t.Errorf("DELETE %s: %d %s, want %d", path, code, body, want)
+		}
 	}
 }
 

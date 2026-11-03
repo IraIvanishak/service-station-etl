@@ -11,14 +11,17 @@ import (
 	"time"
 )
 
-const deleteSupply = `-- name: DeleteSupply :exec
+const deleteSupply = `-- name: DeleteSupply :execrows
 DELETE FROM supply
 WHERE supply_id = $1
 `
 
-func (q *Queries) DeleteSupply(ctx context.Context, supplyID int32) error {
-	_, err := q.db.ExecContext(ctx, deleteSupply, supplyID)
-	return err
+func (q *Queries) DeleteSupply(ctx context.Context, supplyID int32) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteSupply, supplyID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const deleteSupplyDetailsBySupplyId = `-- name: DeleteSupplyDetailsBySupplyId :exec

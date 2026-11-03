@@ -12,7 +12,7 @@ INSERT INTO service_station (address, city_id) VALUES (
 -- name: UpdateServiceStation :exec
 UPDATE service_station SET address = @address, city_id = @city_id WHERE station_id = @station_id;
 
--- name: DeleteServiceStation :exec
+-- name: DeleteServiceStation :execrows
 DELETE FROM service_station WHERE station_id = @station_id;
 
 
@@ -70,7 +70,14 @@ INSERT INTO car_client (car_id, client_id, description, registration_number, vin
 ) RETURNING car_client_id;
 
 
--- name: DeleteOrderCascade :exec
+-- name: DeleteRepairParts :exec
+DELETE FROM service_inventory
+WHERE service_repair_id IN (SELECT service_repairs_id FROM service_repairs WHERE repair_id = @repair_id);
+
+-- name: DeleteRepairServices :exec
+DELETE FROM service_repairs WHERE repair_id = @repair_id;
+
+-- name: DeleteOrder :execrows
 DELETE FROM repair_order WHERE repair_id = @repair_id;
 
 -- name: GetServicePriceById :one

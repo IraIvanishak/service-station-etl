@@ -117,7 +117,7 @@ SET status_id = @status_id
 WHERE supply_id = @supply_id
 RETURNING supply_id;
 
--- name: DeleteSupply :exec
+-- name: DeleteSupply :execrows
 DELETE FROM supply
 WHERE supply_id = @supply_id;
 

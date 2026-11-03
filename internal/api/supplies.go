@@ -158,7 +158,7 @@ func (s *Server) deleteSupply(c *fiber.Ctx) error {
 		if err := q.DeleteSupplyDetailsBySupplyId(ctx, sql.NullInt32{Int32: id, Valid: true}); err != nil {
 			return err
 		}
-		return q.DeleteSupply(ctx, id)
+		return deleted(q.DeleteSupply(ctx, id))
 	})
 	if err != nil {
 		return err

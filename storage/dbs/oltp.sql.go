@@ -43,22 +43,47 @@ func (q *Queries) CreateClient(ctx context.Context, arg CreateClientParams) erro
 	return err
 }
 
-const deleteOrderCascade = `-- name: DeleteOrderCascade :exec
+const deleteOrder = `-- name: DeleteOrder :execrows
 DELETE FROM repair_order WHERE repair_id = $1
 `
 
-func (q *Queries) DeleteOrderCascade(ctx context.Context, repairID int32) error {
-	_, err := q.db.ExecContext(ctx, deleteOrderCascade, repairID)
+func (q *Queries) DeleteOrder(ctx context.Context, repairID int32) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteOrder, repairID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const deleteRepairParts = `-- name: DeleteRepairParts :exec
+DELETE FROM service_inventory
+WHERE service_repair_id IN (SELECT service_repairs_id FROM service_repairs WHERE repair_id = $1)
+`
+
+func (q *Queries) DeleteRepairParts(ctx context.Context, repairID sql.NullInt32) error {
+	_, err := q.db.ExecContext(ctx, deleteRepairParts, repairID)
 	return err
 }
 
-const deleteServiceStation = `-- name: DeleteServiceStation :exec
+const deleteRepairServices = `-- name: DeleteRepairServices :exec
+DELETE FROM service_repairs WHERE repair_id = $1
+`
+
+func (q *Queries) DeleteRepairServices(ctx context.Context, repairID sql.NullInt32) error {
+	_, err := q.db.ExecContext(ctx, deleteRepairServices, repairID)
+	return err
+}
+
+const deleteServiceStation = `-- name: DeleteServiceStation :execrows
 DELETE FROM service_station WHERE station_id = $1
 `
 
-func (q *Queries) DeleteServiceStation(ctx context.Context, stationID int32) error {
-	_, err := q.db.ExecContext(ctx, deleteServiceStation, stationID)
-	return err
+func (q *Queries) DeleteServiceStation(ctx context.Context, stationID int32) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteServiceStation, stationID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getServicePriceById = `-- name: GetServicePriceById :one

@@ -66,7 +66,17 @@ func (s *Server) deleteRepair(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	if err := s.q.DeleteOrderCascade(c.UserContext(), id); err != nil {
+	err = s.inTx(c.UserContext(), func(q *dbs.Queries) error {
+		ctx := c.UserContext()
+		if err := q.DeleteRepairParts(ctx, sql.NullInt32{Int32: id, Valid: true}); err != nil {
+			return err
+		}
+		if err := q.DeleteRepairServices(ctx, sql.NullInt32{Int32: id, Valid: true}); err != nil {
+			return err
+		}
+		return deleted(q.DeleteOrder(ctx, id))
+	})
+	if err != nil {
 		return err
 	}
 	return c.SendString("Deleted")

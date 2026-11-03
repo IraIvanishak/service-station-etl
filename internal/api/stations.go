@@ -44,7 +44,7 @@ func (s *Server) deleteStation(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	if err := s.q.DeleteServiceStation(c.UserContext(), id); err != nil {
+	if err := deleted(s.q.DeleteServiceStation(c.UserContext(), id)); err != nil {
 		return err
 	}
 	return c.SendString("Deleted")
