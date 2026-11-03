@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -23,29 +24,29 @@ func (s *Server) createRepair(c *fiber.Ctx) error {
 	if err := parseBody(c, &repair); err != nil {
 		return err
 	}
-	ctx := c.UserContext()
-
-	carClientID, err := s.q.StoreCarClient(ctx, dbs.StoreCarClientParams{
-		CarID:              repair.CarID,
-		ClientID:           repair.ClientID,
-		Description:        sql.NullString{String: repair.Description, Valid: true},
-		RegistrationNumber: sql.NullString{String: repair.RegistrationNumber, Valid: true},
-		Vin:                sql.NullString{String: repair.VIN, Valid: true},
-		Color:              sql.NullString{String: repair.Color, Valid: true},
-	})
-	if err != nil {
-		return err
-	}
-
-	err = s.q.StoreOrder(ctx, dbs.StoreOrderParams{
-		EmployeeID:      sql.NullInt32{Int32: repair.AssignedEmployeeID, Valid: true},
-		StartDate:       sql.NullTime{Time: time.Now(), Valid: true},
-		RepairStatusID:  sql.NullInt32{Int32: 1, Valid: true},
-		Notes:           sql.NullString{String: repair.Notes, Valid: true},
-		RepairNumber:    sql.NullString{String: dto.CreateRepairNumber(), Valid: true},
-		PaymentStatusID: sql.NullInt32{Int32: 1, Valid: true},
-		CarClientID:     sql.NullInt32{Int32: carClientID, Valid: true},
-		TotalSum:        sql.NullString{String: "0", Valid: true},
+	err := s.inTx(c.UserContext(), func(q *dbs.Queries) error {
+		ctx := c.UserContext()
+		carClientID, err := q.StoreCarClient(ctx, dbs.StoreCarClientParams{
+			CarID:              repair.CarID,
+			ClientID:           repair.ClientID,
+			Description:        sql.NullString{String: repair.Description, Valid: true},
+			RegistrationNumber: sql.NullString{String: repair.RegistrationNumber, Valid: true},
+			Vin:                sql.NullString{String: repair.VIN, Valid: true},
+			Color:              sql.NullString{String: repair.Color, Valid: true},
+		})
+		if err != nil {
+			return err
+		}
+		return q.StoreOrder(ctx, dbs.StoreOrderParams{
+			EmployeeID:      sql.NullInt32{Int32: repair.AssignedEmployeeID, Valid: true},
+			StartDate:       sql.NullTime{Time: time.Now(), Valid: true},
+			RepairStatusID:  sql.NullInt32{Int32: 1, Valid: true},
+			Notes:           sql.NullString{String: repair.Notes, Valid: true},
+			RepairNumber:    sql.NullString{String: dto.CreateRepairNumber(), Valid: true},
+			PaymentStatusID: sql.NullInt32{Int32: 1, Valid: true},
+			CarClientID:     sql.NullInt32{Int32: carClientID, Valid: true},
+			TotalSum:        sql.NullString{String: "0", Valid: true},
+		})
 	})
 	if err != nil {
 		return err
@@ -75,7 +76,10 @@ func (s *Server) addRepairService(c *fiber.Ctx) error {
 	}
 	ctx := c.UserContext()
 
-	price, _ := s.q.GetServicePriceById(ctx, service.ServiceID)
+	price, err := s.q.GetServicePriceById(ctx, service.ServiceID)
+	if err != nil {
+		return fmt.Errorf("service %d: %w", service.ServiceID, err)
+	}
 	unitPrice := dto.ParseFloat(price.String)
 	err = s.q.StoreServiceRepair(ctx, dbs.StoreServiceRepairParams{
 		ServiceID:      sql.NullInt32{Int32: service.ServiceID, Valid: true},

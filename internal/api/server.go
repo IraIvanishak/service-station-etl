@@ -85,3 +85,17 @@ func list[T any](query func(context.Context) ([]T, error)) fiber.Handler {
 		return c.JSON(rows)
 	}
 }
+
+// inTx runs fn in one transaction, so a request that writes several rows
+// either writes all of them or none.
+func (s *Server) inTx(ctx context.Context, fn func(q *dbs.Queries) error) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	if err := fn(s.q.WithTx(tx)); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
+}
