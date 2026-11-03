@@ -50,30 +50,6 @@ func (q *Queries) GetInventoryIDbyDetailsID(ctx context.Context, detailID sql.Nu
 	return inventory_id, err
 }
 
-const getSupplyByID = `-- name: GetSupplyByID :one
-SELECT 
-    s.supply_id,
-    s.supply_number,
-    s.supply_date
-FROM
-    supply s
-WHERE
-    s.supply_id = $1
-`
-
-type GetSupplyByIDRow struct {
-	SupplyID     int32
-	SupplyNumber string
-	SupplyDate   time.Time
-}
-
-func (q *Queries) GetSupplyByID(ctx context.Context, supplyID int32) (GetSupplyByIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getSupplyByID, supplyID)
-	var i GetSupplyByIDRow
-	err := row.Scan(&i.SupplyID, &i.SupplyNumber, &i.SupplyDate)
-	return i, err
-}
-
 const getSupplyDetailPrice = `-- name: GetSupplyDetailPrice :one
 SELECT 
     price

@@ -18,7 +18,7 @@ func (s *Server) createClient(c *fiber.Ctx) error {
 	if err := parseBody(c, &client); err != nil {
 		return err
 	}
-	err := s.q.SoreClient(c.UserContext(), dbs.SoreClientParams{
+	err := s.q.CreateClient(c.UserContext(), dbs.CreateClientParams{
 		FirstName:   client.FirstName,
 		LastName:    client.LastName,
 		PhoneNumber: sql.NullString{String: client.Phone, Valid: true},

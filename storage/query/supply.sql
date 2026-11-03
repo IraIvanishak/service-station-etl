@@ -84,17 +84,6 @@ Values
 Returning supply_invoice_id;
 
 
--- name: GetSupplyByID :one
-SELECT 
-    s.supply_id,
-    s.supply_number,
-    s.supply_date
-FROM
-    supply s
-WHERE
-    s.supply_id = @supply_id;
-
-
 -- name: GetSupplyDetailsByID :many
 SELECT 
     sd.supply_details_id,
