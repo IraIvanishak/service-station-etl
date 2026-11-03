@@ -1,0 +1,11 @@
+# Go build output (air writes here)
+/tmp/
+/bin/
+
+# Local environment
+.env
+.env.local
+
+# Editors / OS
+.idea/
+.DS_Store
