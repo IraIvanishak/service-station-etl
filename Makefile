@@ -24,4 +24,4 @@ test-integration: ## Unit + integration tests (needs `make db-up`)
 	TEST_DATABASE_URL="$(TEST_DB_URL)" go test -count=1 ./...
 
 sqlc: ## Regenerate storage/dbs from storage/query
-	docker run --rm -v "$(CURDIR)":/src -w /src sqlc/sqlc:1.26.0 generate
+	docker run --rm -v "$(CURDIR)":/src -w /src sqlc/sqlc:1.27.0 generate
